@@ -78,7 +78,7 @@ class CrawlPipeline:
             extractor_name=extractor_name,
             extractor_version=extractor_version,
             model_name=model_name,
-            prompt_version=None,
+            prompt_version="ai_method_extractor_v1" if model_name else None,
             status=CrawlStatus.succeeded,
             output_json={},
         )
@@ -151,7 +151,7 @@ class CrawlPipeline:
 
     def _extractor_metadata(self) -> tuple[str, str, str | None]:
         if self._should_use_ai():
-            return ("AIMethodExtractor", "v0", self.settings.openai_compatible_model)
+            return ("AIMethodExtractor", "v1", self.settings.openai_compatible_model)
         return ("RuleBasedMethodExtractor", "v0", None)
 
     def _extract_candidates(
@@ -168,7 +168,7 @@ class CrawlPipeline:
                 rule_result = RuleBasedMethodExtractor().extract(text, document_url=document_url)
                 return (
                     rule_result.candidates,
-                    f"AI extraction failed; fell back to rule extractor: {exc}",
+                    f"AI 抽取失败，已回退到规则抽取器：{exc}",
                 )
 
         rule_result = RuleBasedMethodExtractor().extract(text, document_url=document_url)
@@ -401,7 +401,7 @@ class CrawlPipeline:
             matched_table="teaching_methods",
             matched_id=method.id,
             matched_ids=[str(method.id)],
-            rationale="Rule-based first-version reconciliation for teaching method candidates.",
+            rationale="第一版规则调和：根据语义键判断教学方法候选项的创建、变体或跳过。",
             proposed_patch={
                 "method_id": str(method.id),
                 "candidate_id": str(candidate.id),

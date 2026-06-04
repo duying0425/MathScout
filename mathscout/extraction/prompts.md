@@ -1,21 +1,28 @@
-# Extraction Prompt Sketch
+# 抽取 Prompt 设计
 
-Use schema-constrained JSON output. The extractor must not invent textbook
-versions, regions, chapters, or methods that are not supported by the input text.
+MathScout 的 LLM 抽取必须使用受 schema 约束的 JSON 输出。模型不能输出自由散文，也不能编造输入文本中没有证据支持的教材版本、地区、章节、教师或方法。
 
-## Teaching Method Extraction
+## 教师方法抽取
 
-Input:
+### 输入
 
-- source metadata
-- parsed text chunk
-- nearby chapter/section candidates
-- known skill catalog
+- 来源 URL 和来源元数据
+- 解析后的网页/PDF 文本片段
+- 可选的教材章节候选
+- 已知学生能力编码表
 
-Output:
+### 输出
+
+顶层必须是：
+
+```json
+{"methods": []}
+```
+
+每个 `methods` 元素包含：
 
 - `title`
-- `method_type`: 解题技巧, 教学方法, 易错点, 建模套路, 几何辅助线, 计算策略, 复习策略
+- `method_type`: `解题技巧`、`教学方法`、`易错提醒`、`建模套路`、`几何辅助线`、`计算策略`、`复习策略`
 - `source_teacher`
 - `source_org`
 - `source_region`
@@ -33,50 +40,45 @@ Output:
 - `section_title`
 - `knowledge_point_titles`
 - `skill_codes`
-- `course_alignment_confidence`
-- `evidence`
+- `evidence_snippet`
 - `confidence`
 
-Rules:
+### 抽取规则
 
-- Prefer paraphrase over copying source text.
-- Keep evidence snippets short.
-- Mark low confidence when textbook alignment is inferred.
-- Do not merge different methods just because they appear in the same article.
-- Preserve teacher-specific variants when a source has a distinct explanation,
-  auxiliary construction, classification rule, mental model, warning, or problem pattern.
-- Map every method to the most specific textbook section and knowledge point
-  supported by evidence; mark low alignment confidence when the mapping is inferred.
+- 只抽取有教师方法价值的内容：解题路径、教学讲法、易错提醒、分类规则、辅助线策略、数形结合、建模思路、课堂任务设计等。
+- 不要把普通目录、导航、教材知识点列表、广告、版权声明、下载按钮当作方法。
+- 优先用自己的话概括，避免长段复制原文。
+- `evidence_snippet` 必须短，只保留能支撑该方法的关键证据。
+- 教材章节、地区、教师、学校必须由文本明确支持；如果只是推断，字段设为 `null` 或降低 `confidence`。
+- 不要因为多个方法出现在同一篇文章中就强行合并。
+- 当同一知识点出现不同教师讲法、不同辅助线、不同分类规则、不同直观模型或不同易错提醒时，要保留为不同方法或后续变体。
+- 尽量映射到最具体的教材小节和知识点；无法确定时保留空值，不要硬填。
 
-## Reconciliation Decision
+## 调和决策
 
-Input:
+### 输入
 
-- one candidate knowledge item
-- top retrieved canonical records from SQL/vector search
-- candidate evidence snippets
-- existing canonical evidence summary
+- 一个新候选知识项
+- SQL/向量检索返回的相似 canonical 记录
+- 候选证据片段
+- 已有主知识库记录的证据摘要
 
-Output:
+### 输出
 
-- `action`: `skip`, `update`, `create_variant`, `create`, `conflict`, or `review`
+- `action`: `skip`、`update`、`create_variant`、`create`、`conflict`、`review`
 - `matched_records`
 - `rationale`
 - `proposed_patch`
 - `confidence`
 - `requires_human_review`
 
-Decision rules:
+### 决策规则
 
-- Use `skip` only when the candidate adds no meaningful new concept, method,
-  chapter mapping, or evidence beyond a source sighting.
-- Use `update` when it is the same canonical item but the candidate adds stronger
-  evidence, better wording, aliases, steps, misconceptions, or applicable patterns.
-- Use `create_variant` when it is the same canonical teaching method but a teacher
-  gives a meaningfully different classroom approach worth preserving.
-- Use `create` when no existing item has the same meaning in the same curriculum
-  context.
-- Use `conflict` when the candidate contradicts existing version, chapter,
-  method scope, or regional adoption evidence.
-- Use `review` when similarity is plausible but not decisive.
-- Always explain the decision with source-backed evidence and mention uncertainty.
+- `skip`: 候选没有新增概念、方法、章节映射、证据或教师变体，只更新来源计数和最后出现时间。
+- `update`: 候选与已有主知识库记录相同，但提供了更强证据、更好表述、别名、步骤、易错点或适用题型。
+- `create_variant`: 候选与已有主知识库教学方法同源同义，但教师讲法、辅助线、分类规则、直观模型、课堂提醒或题型模式有明显差异，值得保留。
+- `create`: 在同一课程语境下没有已有记录表达同一含义。
+- `conflict`: 候选与已有教材版本、章节归属、方法适用范围或地区采用证据冲突。
+- `review`: 相似但不够确定，或置信度不足，必须进入人工复核。
+
+所有调和理由必须引用来源证据，并说明不确定性。

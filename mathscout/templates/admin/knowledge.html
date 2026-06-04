@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Knowledge Browser - MathScout Admin</title>
+    <title>知识结构 - MathScout 后台</title>
     <style>
       :root {
         color-scheme: light;
@@ -120,11 +120,11 @@
   </head>
   <body>
     <header>
-      <a href="/admin">Admin</a>
-      <h1>Knowledge Browser</h1>
+      <a href="/admin">后台首页</a>
+      <h1>知识结构</h1>
     </header>
     <main>
-      <section class="summary" aria-label="Knowledge summary">
+      <section class="summary" aria-label="知识结构概览">
         {% for label, value in summary.items() %}
           <div class="metric">
             <div class="metric-label">{{ label }}</div>
@@ -133,17 +133,17 @@
         {% endfor %}
       </section>
 
-      <section class="section-block" aria-label="Books">
-        <h2>Books</h2>
+      <section class="section-block" aria-label="册别">
+        <h2>册别</h2>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Code</th>
-                <th>Book</th>
-                <th>Chapters</th>
-                <th>Sections</th>
-                <th>Knowledge Points</th>
+                <th>编码</th>
+                <th>册别</th>
+                <th>章节数</th>
+                <th>小节数</th>
+                <th>知识点数</th>
               </tr>
             </thead>
             <tbody>
@@ -161,16 +161,16 @@
         </div>
       </section>
 
-      <section class="section-block" aria-label="Sections">
-        <h2>Sections</h2>
+      <section class="section-block" aria-label="小节">
+        <h2>小节</h2>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Book</th>
-                <th>Chapter</th>
-                <th>Section</th>
-                <th>Knowledge Points</th>
+                <th>册别</th>
+                <th>章节</th>
+                <th>小节</th>
+                <th>知识点数</th>
               </tr>
             </thead>
             <tbody>

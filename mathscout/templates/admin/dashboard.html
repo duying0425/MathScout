@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>MathScout Admin</title>
+    <title>MathScout 后台</title>
     <style>
       :root {
         color-scheme: light;
@@ -17,65 +17,200 @@
       }
 
       header {
+        align-items: center;
         background: #ffffff;
         border-bottom: 1px solid #d9dee8;
+        display: flex;
+        gap: 18px;
         padding: 16px 24px;
       }
 
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
       main {
+        display: grid;
+        gap: 22px;
         padding: 24px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
       }
 
       h1 {
         font-size: 20px;
-        margin: 0;
+      }
+
+      h2 {
+        font-size: 16px;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
       }
 
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 12px;
-        max-width: 980px;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        max-width: 1120px;
       }
 
-      a.card {
+      a.card,
+      .metric {
         background: #ffffff;
         border: 1px solid #d9dee8;
         border-radius: 8px;
+      }
+
+      a.card {
         color: inherit;
         display: block;
-        min-height: 96px;
-        padding: 16px;
-        text-decoration: none;
+        min-height: 88px;
+        padding: 14px;
       }
 
-      .value {
-        font-size: 32px;
+      .value,
+      .metric-value {
+        font-size: 30px;
         font-weight: 700;
         line-height: 1;
-        margin-top: 12px;
+        margin-top: 10px;
       }
 
-      .label {
+      .label,
+      .metric-label {
         color: #596579;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
         text-transform: uppercase;
+      }
+
+      .section {
+        display: grid;
+        gap: 10px;
+        max-width: 1120px;
+      }
+
+      .metric {
+        padding: 14px;
+      }
+
+      .table-wrap {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 760px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
+        font-size: 14px;
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f9fafc;
+        color: #596579;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .empty {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        color: #596579;
+        padding: 18px;
       }
     </style>
   </head>
   <body>
     <header>
-      <h1>MathScout Admin</h1>
+      <h1>MathScout 后台</h1>
+      <nav aria-label="后台导航">
+        <a href="/admin/command">AI 指令</a>
+        <a href="/admin/crawl-jobs">任务</a>
+        <a href="/admin/review">复核</a>
+        <a href="/admin/documents">文档</a>
+      </nav>
     </header>
     <main>
-      <section class="grid" aria-label="Dashboard">
+      <section class="grid" aria-label="后台概览">
         {% for card in cards %}
           <a class="card" href="{{ card.href }}">
             <div class="label">{{ card.label }}</div>
             <div class="value">{{ card.value }}</div>
           </a>
         {% endfor %}
+      </section>
+
+      <section class="section" aria-label="已入库产物">
+        <h2>已入库产物</h2>
+        <div class="grid">
+          {% for label, value in recent_outputs.items() %}
+            <div class="metric">
+              <div class="metric-label">{{ label }}</div>
+              <div class="metric-value">{{ value }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="section" aria-label="活动任务">
+        <h2>活动任务</h2>
+        {% if active_jobs %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>名称</th>
+                  <th>状态</th>
+                  <th>任务数</th>
+                  <th>完成</th>
+                  <th>失败</th>
+                  <th>阻塞</th>
+                  <th>创建时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for job in active_jobs %}
+                  <tr>
+                    <td><a href="/admin/crawl-jobs/{{ job.id }}">{{ job.name }}</a></td>
+                    <td>{{ job.status }}</td>
+                    <td>{{ job.total }}</td>
+                    <td>{{ job.succeeded }}</td>
+                    <td>{{ job.failed }}</td>
+                    <td>{{ job.blocked }}</td>
+                    <td>{{ job.created }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <section class="empty">暂无活动任务。</section>
+        {% endif %}
       </section>
     </main>
   </body>

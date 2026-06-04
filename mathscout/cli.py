@@ -19,11 +19,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="mathscout")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("init-db", help="Create database tables.")
+    subparsers.add_parser("init-db", help="创建数据库表。")
 
     import_parser = subparsers.add_parser(
         "import-template",
-        help="Import the .template textbook structure into the database.",
+        help="将 .template 教材结构导入数据库。",
     )
     import_parser.add_argument(
         "--template-dir",
@@ -31,20 +31,20 @@ def main() -> None:
         default=Path(".template/beishida_math_json_v3_with_template"),
     )
 
-    subparsers.add_parser("seed-sources", help="Insert default source sites.")
+    subparsers.add_parser("seed-sources", help="写入默认来源站点。")
 
-    crawl_parser = subparsers.add_parser("crawl-url", help="Fetch one URL and update the DB.")
+    crawl_parser = subparsers.add_parser("crawl-url", help="抓取单个 URL 并更新数据库。")
     crawl_parser.add_argument("url")
     crawl_parser.add_argument(
         "--extractor",
         choices=["auto", "deepseek", "ai", "rule"],
         default="auto",
-        help="Extractor mode. auto uses AI when configured, otherwise rules.",
+        help="抽取模式。auto 在配置 AI 时使用 AI，否则使用规则抽取。",
     )
 
     create_job_parser = subparsers.add_parser(
         "create-job",
-        help="Create a persistent crawl job from URLs.",
+        help="基于 URL 创建持久化爬取任务。",
     )
     create_job_parser.add_argument("--name", required=True)
     create_job_parser.add_argument("--url", action="append", default=[])
@@ -52,7 +52,7 @@ def main() -> None:
 
     run_job_parser = subparsers.add_parser(
         "run-job",
-        help="Run a persistent crawl job. Can be stopped with stop-job.",
+        help="运行持久化爬取任务，可用 stop-job 暂停。",
     )
     run_job_parser.add_argument("job_id")
     run_job_parser.add_argument(
@@ -61,13 +61,13 @@ def main() -> None:
         default="auto",
     )
 
-    stop_job_parser = subparsers.add_parser("stop-job", help="Pause a running crawl job.")
+    stop_job_parser = subparsers.add_parser("stop-job", help="暂停运行中的爬取任务。")
     stop_job_parser.add_argument("job_id")
 
-    cancel_job_parser = subparsers.add_parser("cancel-job", help="Cancel a crawl job.")
+    cancel_job_parser = subparsers.add_parser("cancel-job", help="取消爬取任务。")
     cancel_job_parser.add_argument("job_id")
 
-    status_job_parser = subparsers.add_parser("job-status", help="Show crawl job status.")
+    status_job_parser = subparsers.add_parser("job-status", help="查看爬取任务状态。")
     status_job_parser.add_argument("job_id")
 
     args = parser.parse_args()

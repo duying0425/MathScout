@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 OrchestrationActionType = Literal[
+    "discover_sources",
     "create_crawl_job",
     "create_extraction_job",
     "create_reconciliation_job",

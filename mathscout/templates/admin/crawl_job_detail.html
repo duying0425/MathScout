@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ job.name }} - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+
+      main {
+        display: grid;
+        gap: 22px;
+        padding: 24px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      h2 {
+        font-size: 16px;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .actions form {
+        display: inline;
+      }
+
+      button,
+      select {
+        border-radius: 6px;
+        font: inherit;
+      }
+
+      button {
+        background: #234f8c;
+        border: 0;
+        color: #ffffff;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 8px 10px;
+      }
+
+      button.secondary {
+        background: #6b7280;
+      }
+
+      button.danger {
+        background: #9f2d2d;
+      }
+
+      select {
+        border: 1px solid #cbd3df;
+        color: #1d2433;
+        padding: 7px 8px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        max-width: 960px;
+      }
+
+      .metric,
+      .table-wrap {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+      }
+
+      .metric {
+        padding: 14px;
+      }
+
+      .metric-label {
+        color: #596579;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .metric-value {
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1;
+        margin-top: 8px;
+      }
+
+      .section {
+        display: grid;
+        gap: 10px;
+        max-width: 1180px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 1120px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
+        font-size: 14px;
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f9fafc;
+        color: #596579;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .empty {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        color: #596579;
+        padding: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin/crawl-jobs">任务</a>
+      <h1>{{ job.name }}</h1>
+      <div class="actions">
+        {% if job.can_run %}
+          <form method="post" action="/admin/crawl-jobs/{{ job.id }}/run">
+            <select name="extractor_mode" aria-label="抽取模式">
+              <option value="auto" {% if job.extractor_mode == "auto" %}selected{% endif %}>自动</option>
+              <option value="rule" {% if job.extractor_mode == "rule" %}selected{% endif %}>规则</option>
+              <option value="ai" {% if job.extractor_mode == "ai" %}selected{% endif %}>AI</option>
+            </select>
+            <button type="submit">运行</button>
+          </form>
+        {% endif %}
+        {% if job.can_stop %}
+          <form method="post" action="/admin/crawl-jobs/{{ job.id }}/stop">
+            <button class="secondary" type="submit">暂停</button>
+          </form>
+        {% endif %}
+        {% if job.can_cancel %}
+          <form method="post" action="/admin/crawl-jobs/{{ job.id }}/cancel">
+            <button class="danger" type="submit">取消</button>
+          </form>
+        {% endif %}
+      </div>
+    </header>
+    <main>
+      <section class="grid" aria-label="任务概览">
+        <div class="metric">
+          <div class="metric-label">状态</div>
+          <div class="metric-value">{{ job.status }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">任务数</div>
+          <div class="metric-value">{{ job.total }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">完成</div>
+          <div class="metric-value">{{ job.succeeded }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">失败</div>
+          <div class="metric-value">{{ job.failed }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">阻塞</div>
+          <div class="metric-value">{{ job.blocked }}</div>
+        </div>
+      </section>
+
+      <section class="section" aria-label="已入库产物">
+        <h2>已入库产物</h2>
+        <div class="grid">
+          {% for label, value in saved_summary.items() %}
+            <div class="metric">
+              <div class="metric-label">{{ label }}</div>
+              <div class="metric-value">{{ value }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="section" aria-label="子任务">
+        <h2>子任务</h2>
+        {% if tasks %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>URL</th>
+                  <th>类型</th>
+                  <th>状态</th>
+                  <th>重试</th>
+                  <th>HTTP</th>
+                  <th>发现链接</th>
+                  <th>创建抓取</th>
+                  <th>候选项</th>
+                  <th>方法</th>
+                  <th>变体</th>
+                  <th>说明</th>
+                  <th>错误</th>
+                  <th>更新时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for task in tasks %}
+                  <tr>
+                    <td>{{ task.url }}</td>
+                    <td>{{ task.type }}</td>
+                    <td>{{ task.status }}</td>
+                    <td>{{ task.retries }}</td>
+                    <td>{{ task.http_status }}</td>
+                    <td>{{ task.discovered }}</td>
+                    <td>{{ task.created_tasks }}</td>
+                    <td>{{ task.candidates }}</td>
+                    <td>{{ task.methods }}</td>
+                    <td>{{ task.variants }}</td>
+                    <td>{{ task.note }}</td>
+                    <td>{{ task.error }}</td>
+                    <td>{{ task.updated }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <section class="empty">暂无子任务。</section>
+        {% endif %}
+      </section>
+
+      <section class="section" aria-label="已抓文档">
+        <h2>已抓文档</h2>
+        {% if documents %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>URL</th>
+                  <th>状态</th>
+                  <th>HTTP</th>
+                  <th>登录</th>
+                  <th>抓取时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for document in documents %}
+                  <tr>
+                    <td>{{ document.url }}</td>
+                    <td>{{ document.status }}</td>
+                    <td>{{ document.http_status }}</td>
+                    <td>{{ document.login }}</td>
+                    <td>{{ document.fetched }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <section class="empty">暂无已保存文档。</section>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

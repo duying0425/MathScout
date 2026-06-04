@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 指令中心 - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+
+      main {
+        display: grid;
+        gap: 22px;
+        padding: 24px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      h2 {
+        font-size: 16px;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      form.command-form {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        display: grid;
+        gap: 14px;
+        max-width: 980px;
+        padding: 16px;
+      }
+
+      label {
+        color: #596579;
+        display: grid;
+        font-size: 12px;
+        font-weight: 700;
+        gap: 6px;
+        text-transform: uppercase;
+      }
+
+      textarea,
+      input,
+      select {
+        border: 1px solid #cbd3df;
+        border-radius: 6px;
+        color: #1d2433;
+        font: inherit;
+        padding: 10px 12px;
+      }
+
+      textarea {
+        min-height: 88px;
+        resize: vertical;
+      }
+
+      .row {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      }
+
+      .check-row {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+      }
+
+      .check-row label {
+        display: inline;
+      }
+
+      button {
+        background: #234f8c;
+        border: 0;
+        border-radius: 6px;
+        color: #ffffff;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        justify-self: start;
+        padding: 10px 14px;
+      }
+
+      .section {
+        display: grid;
+        gap: 10px;
+        max-width: 1120px;
+      }
+
+      .table-wrap {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 820px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
+        font-size: 14px;
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f9fafc;
+        color: #596579;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .empty {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        color: #596579;
+        padding: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin">后台首页</a>
+      <h1>AI 指令中心</h1>
+    </header>
+    <main>
+      <form class="command-form" method="post" action="/admin/command">
+        <label>
+          目标
+          <textarea name="objective" required>{{ default_objective }}</textarea>
+        </label>
+        <label>
+          种子 URL
+          <textarea name="seed_urls"></textarea>
+        </label>
+        <div class="row">
+          <label>
+            抽取模式
+            <select name="extractor_mode">
+              <option value="auto" selected>自动</option>
+              <option value="rule">规则</option>
+              <option value="ai">AI</option>
+            </select>
+          </label>
+          <label>
+            最大种子数
+            <input name="max_seed_urls" type="number" min="1" max="50" value="8">
+          </label>
+          <label>
+            每个种子扩展链接数
+            <input name="discovery_max_links" type="number" min="1" max="50" value="12">
+          </label>
+        </div>
+        <div class="check-row">
+          <input id="discover_links" name="discover_links" type="checkbox" value="true" checked>
+          <label for="discover_links">AI 自动发现链接</label>
+        </div>
+        <div class="check-row">
+          <input id="auto_start" name="auto_start" type="checkbox" value="true" checked>
+          <label for="auto_start">创建后立即启动</label>
+        </div>
+        <button type="submit">创建计划</button>
+      </form>
+
+      <section class="section" aria-label="指令记录">
+        <h2>指令记录</h2>
+        {% if commands %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>指令</th>
+                  <th>解释</th>
+                  <th>状态</th>
+                  <th>创建时间</th>
+                  <th>错误</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for command in commands %}
+                  <tr>
+                    <td>{{ command.raw_text }}</td>
+                    <td>{{ command.interpreted_intent }}</td>
+                    <td>{{ command.status }}</td>
+                    <td>{{ command.created }}</td>
+                    <td>{{ command.error }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <section class="empty">暂无指令。</section>
+        {% endif %}
+      </section>
+
+      <section class="section" aria-label="最近决策">
+        <h2>最近决策</h2>
+        {% if decisions %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>类型</th>
+                  <th>目标</th>
+                  <th>理由</th>
+                  <th>置信度</th>
+                  <th>自动执行</th>
+                  <th>创建时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for decision in decisions %}
+                  <tr>
+                    <td>{{ decision.type }}</td>
+                    <td>{{ decision.target }}</td>
+                    <td>{{ decision.rationale }}</td>
+                    <td>{{ decision.confidence }}</td>
+                    <td>{{ decision.auto }}</td>
+                    <td>{{ decision.created }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <section class="empty">暂无决策。</section>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

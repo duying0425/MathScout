@@ -30,11 +30,10 @@ class SourceDiscoveryAgent:
 
 
 class AIOrchestratorAgent:
-    """Creates executable plans from human direction and current run state.
+    """根据人工目标和当前状态生成可执行计划。
 
-    This is intentionally deterministic for the skeleton. A later LLM-backed
-    implementation should keep the same input/output contracts and write every
-    action to `agent_decisions`.
+    当前版本先保持确定性，确保计划可审计。后续接入 LLM 策略层时，
+    仍应沿用同一输入/输出契约，并把每一步写入 `agent_decisions`。
     """
 
     def plan(
@@ -48,12 +47,31 @@ class AIOrchestratorAgent:
         budgets = directive.budgets or context.budgets
         stop_conditions = directive.stop_conditions or context.stop_conditions
 
+        if directive.strategy_preferences.get("discover_links", True):
+            actions.append(
+                OrchestrationAction(
+                    action_type="discover_sources",
+                    rationale=(
+                        "让 SourceDiscoveryAgent 先检查种子页，给候选链接打分，"
+                        "再选择最像教学资源的页面进入爬取队列。"
+                    ),
+                    payload={
+                        "target_scope": target_scope,
+                        "max_links_per_seed": directive.strategy_preferences.get(
+                            "discovery_max_links", 12
+                        ),
+                        "policy": "只允许同域公开 HTTP(S) 链接",
+                    },
+                    priority=90,
+                    confidence=0.78,
+                )
+            )
+
         actions.append(
             OrchestrationAction(
                 action_type="create_crawl_job",
                 rationale=(
-                    "Start or continue crawling sources that match the requested "
-                    "textbook scope."
+                    "创建或继续爬取与目标教材范围匹配的公开来源任务。"
                 ),
                 payload={
                     "target_scope": target_scope,
@@ -67,7 +85,7 @@ class AIOrchestratorAgent:
         actions.append(
             OrchestrationAction(
                 action_type="create_extraction_job",
-                rationale="Parse newly fetched documents and extract candidate knowledge items.",
+                rationale="解析新抓取文档，并抽取候选知识项和教师方法。",
                 payload={"target_scope": target_scope},
                 priority=120,
                 confidence=0.7,
@@ -77,8 +95,8 @@ class AIOrchestratorAgent:
             OrchestrationAction(
                 action_type="create_reconciliation_job",
                 rationale=(
-                    "Compare extracted candidates with canonical records before "
-                    "updating the database."
+                    "入库前先把候选项与已有主知识库记录比较，"
+                    "避免重复、误合并或覆盖人工整理内容。"
                 ),
                 payload={
                     "target_scope": target_scope,
@@ -94,8 +112,7 @@ class AIOrchestratorAgent:
                 OrchestrationAction(
                     action_type="request_login",
                     rationale=(
-                        "Some useful sources are blocked by login and require "
-                        "user-provided access."
+                        "部分有价值来源需要登录授权，必须等待用户提供合法访问信息。"
                     ),
                     payload={"blocked_sources": context.blocked_sources},
                     priority=80,
@@ -107,13 +124,13 @@ class AIOrchestratorAgent:
             directive=directive,
             actions=actions,
             expected_outcomes=[
-                "Fetch source documents within the requested scope.",
-                "Create candidate knowledge items instead of writing directly to canonical tables.",
-                "Reconcile candidates against existing knowledge records.",
+                "在用户指定范围内抓取公开来源文档。",
+                "先创建候选知识项，不直接写入主知识库表。",
+                "将候选项与已有知识记录调和后再决定是否创建、更新或复核。",
             ],
             risk_notes=[
-                "PolicyGuard must approve crawl scope, source access, and budget before execution.",
-                "Conflicts and low-confidence creates should remain visible in the review queue.",
+                "PolicyGuard 必须先检查爬取范围、来源权限和预算。",
+                "冲突项和低置信度创建项必须进入人工复核队列。",
             ],
             stop_conditions=stop_conditions,
             confidence=0.74,
@@ -121,11 +138,10 @@ class AIOrchestratorAgent:
 
 
 class ReconciliationAgent:
-    """Decides how a newly extracted candidate should affect the canonical DB.
+    """判断新抽取候选项应该如何影响主知识库数据库。
 
-    The real implementation will retrieve similar canonical records from SQL and
-    vector search. This skeleton keeps the decision contract stable for the UI,
-    worker tasks, and future model prompts.
+    后续真实实现会从 SQL/向量检索中取相似主知识库记录。当前骨架先保持
+    决策契约稳定，供 UI、worker 和未来模型 prompt 使用。
     """
 
     high_similarity_threshold = 0.92
@@ -141,7 +157,7 @@ class ReconciliationAgent:
                 candidate=candidate,
                 action="create",
                 matched_records=[],
-                rationale="No existing canonical record matched this candidate.",
+                rationale="没有找到与该候选项匹配的已有主知识库记录。",
                 proposed_patch={"create": candidate.model_dump()},
                 confidence=candidate.confidence,
                 requires_human_review=candidate.confidence < 0.9,
@@ -155,9 +171,8 @@ class ReconciliationAgent:
                     action="create_variant",
                     matched_records=[best_match],
                     rationale=(
-                        "Candidate matches an existing canonical teaching method, "
-                        "but teacher techniques should preserve meaningful "
-                        "source-specific variants."
+                        "候选项与已有主知识库教学方法相近，"
+                        "但教师方法需要保留有意义的来源差异，因此创建变体。"
                     ),
                     proposed_patch={
                         "matched_table": best_match.table,
@@ -175,8 +190,8 @@ class ReconciliationAgent:
                 action="skip",
                 matched_records=[best_match],
                 rationale=(
-                    "Candidate appears to duplicate an existing canonical record; "
-                    "only source counters and last-seen metadata should be updated."
+                    "候选项看起来重复已有主知识库记录，"
+                    "只需要更新来源计数和最后出现时间。"
                 ),
                 proposed_patch={
                     "matched_table": best_match.table,
@@ -194,8 +209,8 @@ class ReconciliationAgent:
                 action="review",
                 matched_records=[best_match],
                 rationale=(
-                    "Candidate is similar to an existing record but not close enough "
-                    "for automatic skip or update."
+                    "候选项与已有记录相似，但相似度不足以自动跳过或更新，"
+                    "需要人工复核。"
                 ),
                 proposed_patch={},
                 confidence=min(candidate.confidence, best_match.confidence),
@@ -206,7 +221,7 @@ class ReconciliationAgent:
             candidate=candidate,
             action="create",
             matched_records=matches[:3],
-            rationale="Candidate is materially different from retrieved records.",
+            rationale="候选项与检索到的记录存在实质差异，建议创建新记录。",
             proposed_patch={"create": candidate.model_dump()},
             confidence=candidate.confidence,
             requires_human_review=candidate.confidence < 0.9,

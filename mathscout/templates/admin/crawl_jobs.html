@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>爬取任务 - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      .table-wrap {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 1040px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
+        font-size: 14px;
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f9fafc;
+        color: #596579;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .actions form {
+        display: inline;
+      }
+
+      button,
+      select {
+        border-radius: 6px;
+        font: inherit;
+      }
+
+      button {
+        background: #234f8c;
+        border: 0;
+        color: #ffffff;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 8px 10px;
+      }
+
+      button.secondary {
+        background: #6b7280;
+      }
+
+      button.danger {
+        background: #9f2d2d;
+      }
+
+      select {
+        border: 1px solid #cbd3df;
+        color: #1d2433;
+        padding: 7px 8px;
+      }
+
+      .empty {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        color: #596579;
+        padding: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin">后台首页</a>
+      <h1>爬取任务</h1>
+      <a href="/admin/command">新建 AI 指令</a>
+    </header>
+    <main>
+      {% if jobs %}
+        <section class="table-wrap" aria-label="爬取任务">
+          <table>
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>状态</th>
+                <th>抽取模式</th>
+                <th>总数</th>
+                <th>等待</th>
+                <th>运行</th>
+                <th>完成</th>
+                <th>失败</th>
+                <th>阻塞</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for job in jobs %}
+                <tr>
+                  <td><a href="/admin/crawl-jobs/{{ job.id }}">{{ job.name }}</a></td>
+                  <td>{{ job.status }}</td>
+                  <td>{{ job.extractor_mode_label }}</td>
+                  <td>{{ job.total }}</td>
+                  <td>{{ job.pending }}</td>
+                  <td>{{ job.running }}</td>
+                  <td>{{ job.succeeded }}</td>
+                  <td>{{ job.failed }}</td>
+                  <td>{{ job.blocked }}</td>
+                  <td>{{ job.created }}</td>
+                  <td>
+                    <div class="actions">
+                      {% if job.can_run %}
+                        <form method="post" action="/admin/crawl-jobs/{{ job.id }}/run">
+                          <select name="extractor_mode" aria-label="抽取模式">
+                            <option value="auto" {% if job.extractor_mode == "auto" %}selected{% endif %}>自动</option>
+                            <option value="rule" {% if job.extractor_mode == "rule" %}selected{% endif %}>规则</option>
+                            <option value="ai" {% if job.extractor_mode == "ai" %}selected{% endif %}>AI</option>
+                          </select>
+                          <button type="submit">运行</button>
+                        </form>
+                      {% endif %}
+                      {% if job.can_stop %}
+                        <form method="post" action="/admin/crawl-jobs/{{ job.id }}/stop">
+                          <button class="secondary" type="submit">暂停</button>
+                        </form>
+                      {% endif %}
+                      {% if job.can_cancel %}
+                        <form method="post" action="/admin/crawl-jobs/{{ job.id }}/cancel">
+                          <button class="danger" type="submit">取消</button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      {% else %}
+        <section class="empty">暂无爬取任务。</section>
+      {% endif %}
+    </main>
+  </body>
+</html>
