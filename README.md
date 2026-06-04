@@ -109,6 +109,10 @@ Admin UI:
 http://127.0.0.1:8000/admin
 ```
 
+The admin UI is database-backed. After `init-db`, `import-template`, and
+`seed-sources`, the dashboard shows real counts and the knowledge page can browse
+the imported textbook structure.
+
 ## First Crawl Flow
 
 ```powershell

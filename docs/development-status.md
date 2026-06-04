@@ -14,6 +14,9 @@ Implemented:
 - optional DeepSeek/OpenAI-compatible extraction
 - textbook template import from `.template`
 - source-site seeding
+- database-backed admin dashboard counts
+- admin knowledge browser backed by textbook, chapter, section, and knowledge-point tables
+- admin list pages backed by source, crawl job, document, review, change, command, and technique tables
 - single URL crawling
 - persistent DB-backed crawl jobs
 - stop/resume behavior through job status
@@ -24,11 +27,11 @@ Implemented:
 - teacher/source method variant creation
 - basic method-to-knowledge-point and method-to-section inference
 - reconciliation decision audit records
-- placeholder admin pages for dashboard, command center, techniques, knowledge, review, and changes
 
 Not implemented yet:
 
 - real admin edit forms
+- admin detail pages and filtering/search
 - full LLM reconciliation beyond extraction
 - crawling link discovery from seed pages
 - robots/rate-limit enforcement inside job runner
@@ -58,6 +61,29 @@ Admin UI:
 ```text
 http://127.0.0.1:8000/admin
 ```
+
+The admin UI uses the same `DATABASE_URL` as the CLI. In the default SQLite
+setup, the dashboard should show the imported template data after initialization:
+
+- `Knowledge`: 425
+- `Source Sites`: 3
+
+The knowledge page shows 1 textbook series, 6 books, 34 chapters, 127 sections,
+425 knowledge points, and 16 student skills from the imported template.
+
+## Handoff Notes
+
+`.env` and `.data/` are local-only and are not committed. In a new environment,
+copy `.env.example` to `.env`, add any private API keys manually, then run:
+
+```powershell
+mathscout init-db
+mathscout import-template
+mathscout seed-sources
+```
+
+Do not expect the local SQLite database from this machine to exist after clone.
+The template import recreates the baseline textbook data.
 
 ## DeepSeek
 
@@ -96,9 +122,8 @@ so completed pages remain stored and remaining tasks stay pending.
 Commands run successfully in the local `.venv`:
 
 ```powershell
-ruff check mathscout scripts tests
-pytest -q
-python -m compileall mathscout scripts tests
+ruff check mathscout tests
+pytest
 ```
 
 SQLite smoke test also passed:
@@ -111,7 +136,7 @@ SQLite smoke test also passed:
 
 ## Recommended Next Work
 
-1. Add admin list/detail pages backed by database queries.
+1. Add admin detail pages, filters, and search for textbook structure and crawl outputs.
 2. Add manual edit forms for `TeachingMethod`, `TeachingMethodVariant`, and mappings.
 3. Add link discovery from seed source pages.
 4. Wire `RobotsChecker` and per-domain crawl delays into `CrawlJobRunner`.

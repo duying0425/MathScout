@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} - MathScout Admin</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      .table-wrap {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 760px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
+        font-size: 14px;
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f9fafc;
+        color: #596579;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .empty {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        color: #596579;
+        padding: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin">Admin</a>
+      <h1>{{ title }}</h1>
+    </header>
+    <main>
+      {% if rows %}
+        <section class="table-wrap" aria-label="{{ title }}">
+          <table>
+            <thead>
+              <tr>
+                {% for column in columns %}
+                  <th>{{ column }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr>
+                  {% for column in columns %}
+                    <td>{{ row[column] }}</td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      {% else %}
+        <section class="empty">No records yet.</section>
+      {% endif %}
+    </main>
+  </body>
+</html>

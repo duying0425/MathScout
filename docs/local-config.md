@@ -26,7 +26,28 @@ This SQLite mode requires no Docker, no Redis, and no PostgreSQL. It is enough f
 - creating crawl jobs
 - running one-process crawls
 - storing fetched documents, candidates, methods, variants, and decisions
-- opening the admin UI
+- opening the database-backed admin UI
+
+The SQLite database file lives under `.data/` and is local-only. After cloning in
+a new environment, run the initialization commands again:
+
+```powershell
+mathscout init-db
+mathscout import-template
+mathscout seed-sources
+```
+
+The admin dashboard and list pages use the same `DATABASE_URL` setting as the
+CLI, so switching from SQLite to PostgreSQL changes both surfaces together.
+
+## Crawler User Agent
+
+`DEFAULT_USER_AGENT` is used as the HTTP `User-Agent` header for crawler
+requests and for `robots.txt` permission checks. It is not an API key.
+
+Changing this value can affect crawling behavior because some sites filter,
+rate-limit, or vary responses based on user agent. Keep it descriptive for real
+public crawls.
 
 ## DeepSeek
 
