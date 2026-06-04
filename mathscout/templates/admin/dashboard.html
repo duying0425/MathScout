@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MathScout Admin</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        padding: 16px 24px;
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        max-width: 980px;
+      }
+
+      a.card {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        color: inherit;
+        display: block;
+        min-height: 96px;
+        padding: 16px;
+        text-decoration: none;
+      }
+
+      .value {
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1;
+        margin-top: 12px;
+      }
+
+      .label {
+        color: #596579;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>MathScout Admin</h1>
+    </header>
+    <main>
+      <section class="grid" aria-label="Dashboard">
+        {% for card in cards %}
+          <a class="card" href="{{ card.href }}">
+            <div class="label">{{ card.label }}</div>
+            <div class="value">{{ card.value }}</div>
+          </a>
+        {% endfor %}
+      </section>
+    </main>
+  </body>
+</html>

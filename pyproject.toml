@@ -1,0 +1,49 @@
+[project]
+name = "mathscout"
+version = "0.1.0"
+description = "Junior high school math resource crawler and teaching-knowledge extraction app."
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+dependencies = [
+  "alembic>=1.13",
+  "beautifulsoup4>=4.12",
+  "celery>=5.4",
+  "fastapi>=0.115",
+  "httpx>=0.27",
+  "jinja2>=3.1",
+  "orjson>=3.10",
+  "pgvector>=0.3",
+  "playwright>=1.45",
+  "psycopg[binary]>=3.2",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "pymupdf>=1.24",
+  "python-multipart>=0.0.9",
+  "redis>=5.0",
+  "sqlalchemy>=2.0",
+  "trafilatura>=1.9",
+  "typer>=0.12",
+  "uvicorn[standard]>=0.30"
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.10",
+  "pytest>=8.2",
+  "ruff>=0.5"
+]
+
+[project.scripts]
+mathscout = "mathscout.cli:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true

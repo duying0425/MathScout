@@ -1,0 +1,517 @@
+{
+  "meta": {
+    "dataset_name": "北师大版初中数学知识结构拆分数据",
+    "file_type": "semester_standalone_json",
+    "is_semester_data_completely_independent": false,
+    "independence_note": "本文件可独立读取，但课程设计上与其他学期存在前置知识、后续应用和共享技能体系关系。",
+    "semester_id": "G9B",
+    "semester_name": "九年级下册",
+    "json_author": "ChatGPT（GPT-5.5 Thinking）",
+    "updated_date": "2026-06-02",
+    "textbook_version_info": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "九年级下册",
+      "edition_label": "现行公开目录版",
+      "curriculum_standard_basis": "当前文件按可公开核验的北师大版九年级下册目录结构整理；新课标修订版是否已在所在地区实际使用需以当地学校用书为准",
+      "revision_status": "暂不标为2022课标滚动新版",
+      "rollout_status": "如果按2024秋七年级起始年级滚动替换，新课标修订教材通常会先覆盖七、八年级，再进入九年级",
+      "confidence": "medium",
+      "note": "为避免误标，本文件不写成“2026春版新教材”。后续拿到封面/版权页后可精确修正。"
+    },
+    "shared_id_policy": {
+      "skill_id_scope": "global",
+      "meaning": "S01-S16 是全局共享技能编号，六个学期文件中含义完全一致。",
+      "example": "S05 在任何学期都表示“数形结合”，不是该学期局部编号。",
+      "chapter_section_id_scope": "semester_prefixed",
+      "meaning_chapter_section": "章节和小节编号带有学期前缀，例如 G7A-C2-S1，因此天然避免跨学期冲突。"
+    }
+  },
+  "shared_skill_catalog": [
+    {
+      "skill_id": "S01",
+      "name": "概念辨析",
+      "description": "抓定义条件、适用范围、反例与边界。"
+    },
+    {
+      "skill_id": "S02",
+      "name": "代数化表示",
+      "description": "把文字、图形、数量关系转化为式、方程、不等式或函数。"
+    },
+    {
+      "skill_id": "S03",
+      "name": "规范运算",
+      "description": "按法则、性质、顺序准确计算，控制符号错误。"
+    },
+    {
+      "skill_id": "S04",
+      "name": "等价变形",
+      "description": "移项、合并、去括号、因式分解、通分、配方、换元等。"
+    },
+    {
+      "skill_id": "S05",
+      "name": "数形结合",
+      "description": "用数轴、坐标系、函数图象、几何图形解释数量关系。"
+    },
+    {
+      "skill_id": "S06",
+      "name": "分类讨论",
+      "description": "根据正负、位置、交点个数、图形形态、参数范围分情况处理。"
+    },
+    {
+      "skill_id": "S07",
+      "name": "方程建模",
+      "description": "找等量关系，设未知数，列方程或方程组解决问题。"
+    },
+    {
+      "skill_id": "S08",
+      "name": "不等式建模",
+      "description": "把范围、最大最小、至少至多等条件转化为不等式或不等式组。"
+    },
+    {
+      "skill_id": "S09",
+      "name": "函数建模",
+      "description": "从表格、图象、关系式中识别变量关系，建立函数模型。"
+    },
+    {
+      "skill_id": "S10",
+      "name": "几何直观",
+      "description": "观察图形结构、添加辅助线、识别基本图形。"
+    },
+    {
+      "skill_id": "S11",
+      "name": "几何证明",
+      "description": "按照“已知—求证—依据—推理”完成逻辑证明。"
+    },
+    {
+      "skill_id": "S12",
+      "name": "全等与相似转化",
+      "description": "用全等、相似、比例关系转化边角关系。"
+    },
+    {
+      "skill_id": "S13",
+      "name": "统计分析",
+      "description": "选择统计量描述集中趋势、离散程度和分布特征。"
+    },
+    {
+      "skill_id": "S14",
+      "name": "概率分析",
+      "description": "用枚举、树状图、列表、频率稳定性分析随机事件。"
+    },
+    {
+      "skill_id": "S15",
+      "name": "模型检验",
+      "description": "检查解的合理性、增根、取值范围、实际意义和单位。"
+    },
+    {
+      "skill_id": "S16",
+      "name": "综合压轴意识",
+      "description": "组合使用函数、方程、几何、分类讨论等工具。"
+    }
+  ],
+  "semester": {
+    "semester_id": "G9B",
+    "name": "九年级下册",
+    "positioning": "完成初中数学压轴工具链：三角函数、二次函数、圆，并综合回扣几何与代数模型。",
+    "chapters": [
+      {
+        "chapter_id": "G9B-C1",
+        "title": "直角三角形的边角关系",
+        "sections": [
+          {
+            "section_id": "G9B-C1-S1",
+            "title": "锐角三角函数",
+            "knowledge_points": [
+              "正弦",
+              "余弦",
+              "正切",
+              "直角三角形边角关系"
+            ],
+            "skill_refs": [
+              "S01",
+              "S10",
+              "S12"
+            ],
+            "typical_tasks": [
+              "根据三角函数定义求值",
+              "已知边求角或比值"
+            ]
+          },
+          {
+            "section_id": "G9B-C1-S2",
+            "title": "30°，45°，60°角的三角函数值",
+            "knowledge_points": [
+              "特殊角三角函数值",
+              "等腰直角三角形",
+              "含 30°直角三角形"
+            ],
+            "skill_refs": [
+              "S03",
+              "S10"
+            ],
+            "typical_tasks": [
+              "特殊角求值",
+              "特殊直角三角形边长计算"
+            ]
+          },
+          {
+            "section_id": "G9B-C1-S3",
+            "title": "三角函数的计算",
+            "knowledge_points": [
+              "计算器求三角函数",
+              "已知三角函数值求角",
+              "近似计算"
+            ],
+            "skill_refs": [
+              "S03",
+              "S15"
+            ],
+            "typical_tasks": [
+              "实际测量中的近似计算",
+              "角度与比值互求"
+            ]
+          },
+          {
+            "section_id": "G9B-C1-S4",
+            "title": "解直角三角形",
+            "knowledge_points": [
+              "已知边角求其余边角",
+              "勾股定理与三角函数结合",
+              "解三角形流程"
+            ],
+            "skill_refs": [
+              "S03",
+              "S10",
+              "S15"
+            ],
+            "typical_tasks": [
+              "解直角三角形",
+              "选择正弦余弦正切"
+            ]
+          },
+          {
+            "section_id": "G9B-C1-S5",
+            "title": "三角函数的应用",
+            "knowledge_points": [
+              "仰角、俯角",
+              "坡度、坡角",
+              "方位角",
+              "实际测量模型"
+            ],
+            "skill_refs": [
+              "S02",
+              "S10",
+              "S15"
+            ],
+            "typical_tasks": [
+              "坡度问题",
+              "仰俯角测距"
+            ]
+          },
+          {
+            "section_id": "G9B-C1-S6",
+            "title": "利用三角函数测高",
+            "knowledge_points": [
+              "测高模型",
+              "不可达距离测量",
+              "多直角三角形组合"
+            ],
+            "skill_refs": [
+              "S02",
+              "S10",
+              "S16"
+            ],
+            "typical_tasks": [
+              "测楼高、塔高",
+              "双观测点问题"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G9B-C2",
+        "title": "二次函数",
+        "sections": [
+          {
+            "section_id": "G9B-C2-S1",
+            "title": "二次函数",
+            "knowledge_points": [
+              "二次函数定义",
+              "一般式",
+              "自变量取值范围",
+              "函数值"
+            ],
+            "skill_refs": [
+              "S01",
+              "S09"
+            ],
+            "typical_tasks": [
+              "识别二次函数",
+              "代入求值"
+            ]
+          },
+          {
+            "section_id": "G9B-C2-S2",
+            "title": "二次函数的图象与性质",
+            "knowledge_points": [
+              "抛物线",
+              "开口方向",
+              "对称轴",
+              "顶点",
+              "最值",
+              "平移变换"
+            ],
+            "skill_refs": [
+              "S05",
+              "S06",
+              "S09"
+            ],
+            "typical_tasks": [
+              "画抛物线草图",
+              "由解析式判断性质"
+            ]
+          },
+          {
+            "section_id": "G9B-C2-S3",
+            "title": "确定二次函数的表达式",
+            "knowledge_points": [
+              "一般式",
+              "顶点式",
+              "交点式",
+              "待定系数法"
+            ],
+            "skill_refs": [
+              "S04",
+              "S09",
+              "S15"
+            ],
+            "typical_tasks": [
+              "根据三点求解析式",
+              "根据顶点和一点求解析式"
+            ]
+          },
+          {
+            "section_id": "G9B-C2-S4",
+            "title": "二次函数的应用",
+            "knowledge_points": [
+              "面积最值",
+              "利润最值",
+              "抛物线运动模型",
+              "实际取值范围"
+            ],
+            "skill_refs": [
+              "S02",
+              "S06",
+              "S09",
+              "S15"
+            ],
+            "typical_tasks": [
+              "最大利润",
+              "矩形面积最值",
+              "拱桥模型"
+            ]
+          },
+          {
+            "section_id": "G9B-C2-S5",
+            "title": "二次函数与一元二次方程",
+            "knowledge_points": [
+              "抛物线与 x 轴交点",
+              "方程根与函数零点",
+              "判别式与交点个数",
+              "函数、不等式、方程统一"
+            ],
+            "skill_refs": [
+              "S05",
+              "S06",
+              "S09",
+              "S16"
+            ],
+            "typical_tasks": [
+              "判断交点个数",
+              "由图象解方程或不等式"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G9B-C3",
+        "title": "圆",
+        "sections": [
+          {
+            "section_id": "G9B-C3-S1",
+            "title": "圆",
+            "knowledge_points": [
+              "圆的定义",
+              "弦、弧、半径、直径",
+              "点与圆的位置关系"
+            ],
+            "skill_refs": [
+              "S01",
+              "S10"
+            ],
+            "typical_tasks": [
+              "识别圆中元素",
+              "半径相等模型"
+            ]
+          },
+          {
+            "section_id": "G9B-C3-S2",
+            "title": "圆的对称性",
+            "knowledge_points": [
+              "圆的轴对称与中心对称",
+              "垂径思想初步",
+              "弧、弦、圆心角关系"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10"
+            ],
+            "typical_tasks": [
+              "由对称性求弦长或角",
+              "圆心辅助线"
+            ]
+          },
+          {
+            "section_id": "G9B-C3-S3",
+            "title": "垂径定理",
+            "knowledge_points": [
+              "垂径定理",
+              "弦心距",
+              "半径—半弦—弦心距直角三角形"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11",
+              "S12"
+            ],
+            "typical_tasks": [
+              "弦长计算",
+              "垂径辅助线"
+            ]
+          },
+          {
+            "section_id": "G9B-C3-S4",
+            "title": "圆周角和圆心角的关系",
+            "knowledge_points": [
+              "圆周角定理",
+              "同弧所对圆周角相等",
+              "直径所对圆周角为直角"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11",
+              "S12"
+            ],
+            "typical_tasks": [
+              "圆中角度计算",
+              "构造直径得直角"
+            ]
+          },
+          {
+            "section_id": "G9B-C3-S5",
+            "title": "确定圆的条件",
+            "knowledge_points": [
+              "不共线三点确定一个圆",
+              "三角形外接圆",
+              "外心"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "作外接圆",
+              "利用外心性质证明"
+            ]
+          },
+          {
+            "section_id": "G9B-C3-S6",
+            "title": "直线和圆的位置关系",
+            "knowledge_points": [
+              "相交、相切、相离",
+              "圆心到直线距离与半径比较",
+              "切线性质与判定"
+            ],
+            "skill_refs": [
+              "S06",
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "判断直线与圆位置",
+              "证明切线"
+            ]
+          },
+          {
+            "section_id": "G9B-C3-S7",
+            "title": "切线长定理",
+            "knowledge_points": [
+              "从圆外一点引两条切线长相等",
+              "切线与半径垂直",
+              "圆外点切线模型"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11",
+              "S16"
+            ],
+            "typical_tasks": [
+              "切线长计算",
+              "圆与三角形综合"
+            ]
+          },
+          {
+            "section_id": "G9B-C3-S8",
+            "title": "圆内接正多边形",
+            "knowledge_points": [
+              "正多边形与圆",
+              "中心角",
+              "半径、边长、apothem 关系"
+            ],
+            "skill_refs": [
+              "S03",
+              "S10"
+            ],
+            "typical_tasks": [
+              "正多边形角度与边长计算"
+            ]
+          },
+          {
+            "section_id": "G9B-C3-S9",
+            "title": "弧长及扇形的面积",
+            "knowledge_points": [
+              "弧长公式",
+              "扇形面积公式",
+              "圆锥侧面积联系"
+            ],
+            "skill_refs": [
+              "S03",
+              "S10",
+              "S15"
+            ],
+            "typical_tasks": [
+              "弧长、扇形面积计算",
+              "组合图形面积"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cross_semester_links_related_to_this_file": [
+    {
+      "from": "G8A-C1 勾股定理",
+      "to": "G9B-C1 直角三角形的边角关系",
+      "relationship": "从边边关系扩展到边角关系，形成解直角三角形工具链。"
+    },
+    {
+      "from": "G9A-C2 一元二次方程",
+      "to": "G9B-C2 二次函数",
+      "relationship": "一元二次方程的根对应二次函数与 x 轴交点，是函数压轴的核心接口。"
+    },
+    {
+      "from": "G9A-C4 图形的相似",
+      "to": "G9B-C3 圆",
+      "relationship": "相似、比例、角关系是圆中证明和计算的重要支撑。"
+    }
+  ]
+}

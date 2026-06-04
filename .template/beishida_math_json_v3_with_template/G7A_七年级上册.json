@@ -1,0 +1,518 @@
+{
+  "meta": {
+    "dataset_name": "北师大版初中数学知识结构拆分数据",
+    "file_type": "semester_standalone_json",
+    "is_semester_data_completely_independent": false,
+    "independence_note": "本文件可独立读取，但课程设计上与其他学期存在前置知识、后续应用和共享技能体系关系。",
+    "semester_id": "G7A",
+    "semester_name": "七年级上册",
+    "json_author": "ChatGPT（GPT-5.5 Thinking）",
+    "updated_date": "2026-06-02",
+    "textbook_version_info": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "七年级上册",
+      "edition_label": "2024秋版",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "revision_status": "新课标修订教材",
+      "rollout_status": "已进入新课标修订教材滚动使用序列",
+      "confidence": "high",
+      "note": "用于区分：2022 是课程标准版本；2024秋是该册教材投入使用/标称版本。"
+    },
+    "shared_id_policy": {
+      "skill_id_scope": "global",
+      "meaning": "S01-S16 是全局共享技能编号，六个学期文件中含义完全一致。",
+      "example": "S05 在任何学期都表示“数形结合”，不是该学期局部编号。",
+      "chapter_section_id_scope": "semester_prefixed",
+      "meaning_chapter_section": "章节和小节编号带有学期前缀，例如 G7A-C2-S1，因此天然避免跨学期冲突。"
+    }
+  },
+  "shared_skill_catalog": [
+    {
+      "skill_id": "S01",
+      "name": "概念辨析",
+      "description": "抓定义条件、适用范围、反例与边界。"
+    },
+    {
+      "skill_id": "S02",
+      "name": "代数化表示",
+      "description": "把文字、图形、数量关系转化为式、方程、不等式或函数。"
+    },
+    {
+      "skill_id": "S03",
+      "name": "规范运算",
+      "description": "按法则、性质、顺序准确计算，控制符号错误。"
+    },
+    {
+      "skill_id": "S04",
+      "name": "等价变形",
+      "description": "移项、合并、去括号、因式分解、通分、配方、换元等。"
+    },
+    {
+      "skill_id": "S05",
+      "name": "数形结合",
+      "description": "用数轴、坐标系、函数图象、几何图形解释数量关系。"
+    },
+    {
+      "skill_id": "S06",
+      "name": "分类讨论",
+      "description": "根据正负、位置、交点个数、图形形态、参数范围分情况处理。"
+    },
+    {
+      "skill_id": "S07",
+      "name": "方程建模",
+      "description": "找等量关系，设未知数，列方程或方程组解决问题。"
+    },
+    {
+      "skill_id": "S08",
+      "name": "不等式建模",
+      "description": "把范围、最大最小、至少至多等条件转化为不等式或不等式组。"
+    },
+    {
+      "skill_id": "S09",
+      "name": "函数建模",
+      "description": "从表格、图象、关系式中识别变量关系，建立函数模型。"
+    },
+    {
+      "skill_id": "S10",
+      "name": "几何直观",
+      "description": "观察图形结构、添加辅助线、识别基本图形。"
+    },
+    {
+      "skill_id": "S11",
+      "name": "几何证明",
+      "description": "按照“已知—求证—依据—推理”完成逻辑证明。"
+    },
+    {
+      "skill_id": "S12",
+      "name": "全等与相似转化",
+      "description": "用全等、相似、比例关系转化边角关系。"
+    },
+    {
+      "skill_id": "S13",
+      "name": "统计分析",
+      "description": "选择统计量描述集中趋势、离散程度和分布特征。"
+    },
+    {
+      "skill_id": "S14",
+      "name": "概率分析",
+      "description": "用枚举、树状图、列表、频率稳定性分析随机事件。"
+    },
+    {
+      "skill_id": "S15",
+      "name": "模型检验",
+      "description": "检查解的合理性、增根、取值范围、实际意义和单位。"
+    },
+    {
+      "skill_id": "S16",
+      "name": "综合压轴意识",
+      "description": "组合使用函数、方程、几何、分类讨论等工具。"
+    }
+  ],
+  "semester": {
+    "semester_id": "G7A",
+    "name": "七年级上册",
+    "positioning": "完成小学到初中的过渡：建立数感、符号意识、基本图形认识、方程建模和数据意识。",
+    "chapters": [
+      {
+        "chapter_id": "G7A-C1",
+        "title": "丰富的图形世界",
+        "chapter_goal": "从生活实物进入几何世界，建立空间观念和图形表征能力。",
+        "sections": [
+          {
+            "section_id": "G7A-C1-S1",
+            "title": "生活中的立体图形",
+            "knowledge_points": [
+              "常见几何体：棱柱、棱锥、圆柱、圆锥、球",
+              "点、线、面、体之间的关系",
+              "从实物抽象出几何体"
+            ],
+            "skill_refs": [
+              "S01",
+              "S10"
+            ],
+            "typical_tasks": [
+              "识别几何体",
+              "按特征分类",
+              "从生活场景抽象模型"
+            ]
+          },
+          {
+            "section_id": "G7A-C1-S2",
+            "title": "从立体图形到平面图形",
+            "knowledge_points": [
+              "展开图与几何体对应关系",
+              "三视图或观察方向的初步意识",
+              "平面图形与立体图形之间的转化"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10"
+            ],
+            "typical_tasks": [
+              "判断展开图能否围成立体图形",
+              "根据视角识别平面图形"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7A-C2",
+        "title": "有理数及其运算",
+        "chapter_goal": "建立负数、有理数、数轴、绝对值和有理数运算体系。",
+        "sections": [
+          {
+            "section_id": "G7A-C2-S1",
+            "title": "认识有理数",
+            "knowledge_points": [
+              "正数、负数、0 的意义",
+              "有理数分类",
+              "数轴、相反数、绝对值",
+              "有理数大小比较"
+            ],
+            "skill_refs": [
+              "S01",
+              "S05",
+              "S06"
+            ],
+            "typical_tasks": [
+              "用正负数表示实际意义",
+              "数轴比较大小",
+              "绝对值分类"
+            ]
+          },
+          {
+            "section_id": "G7A-C2-S2",
+            "title": "有理数的加减运算",
+            "knowledge_points": [
+              "同号、异号加法法则",
+              "减法转化为加法",
+              "加法交换律、结合律",
+              "含括号算式的化简"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04"
+            ],
+            "typical_tasks": [
+              "有理数加减混合运算",
+              "温差、收支、海拔问题"
+            ]
+          },
+          {
+            "section_id": "G7A-C2-S3",
+            "title": "有理数的乘除运算",
+            "knowledge_points": [
+              "有理数乘除符号法则",
+              "倒数",
+              "乘法交换律、结合律、分配律",
+              "除法转化为乘法"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04"
+            ],
+            "typical_tasks": [
+              "多因数乘法符号判断",
+              "分配律简算"
+            ]
+          },
+          {
+            "section_id": "G7A-C2-S4",
+            "title": "有理数的乘方",
+            "knowledge_points": [
+              "乘方、底数、指数",
+              "负数乘方的符号规律",
+              "科学记数法初步",
+              "近似数与有效数字初步"
+            ],
+            "skill_refs": [
+              "S01",
+              "S03"
+            ],
+            "typical_tasks": [
+              "乘方计算",
+              "科学记数法表示大数或小数"
+            ]
+          },
+          {
+            "section_id": "G7A-C2-S5",
+            "title": "有理数的混合运算",
+            "knowledge_points": [
+              "运算顺序",
+              "含乘方、括号、四则运算的综合计算",
+              "运算律的合理使用"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04",
+              "S15"
+            ],
+            "typical_tasks": [
+              "复杂计算纠错",
+              "选择简便算法"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7A-C3",
+        "title": "整式及其加减",
+        "chapter_goal": "完成由数到式的抽象，形成符号表达和代数化思维。",
+        "sections": [
+          {
+            "section_id": "G7A-C3-S1",
+            "title": "代数式",
+            "knowledge_points": [
+              "字母表示数",
+              "代数式的意义",
+              "代数式求值",
+              "实际问题中的数量关系表达"
+            ],
+            "skill_refs": [
+              "S01",
+              "S02",
+              "S03"
+            ],
+            "typical_tasks": [
+              "用代数式表示周长、面积、费用",
+              "代入求值"
+            ]
+          },
+          {
+            "section_id": "G7A-C3-S2",
+            "title": "整式的加减",
+            "knowledge_points": [
+              "单项式、多项式、整式",
+              "同类项",
+              "合并同类项",
+              "去括号与添括号"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04"
+            ],
+            "typical_tasks": [
+              "整式化简",
+              "先化简再求值"
+            ]
+          },
+          {
+            "section_id": "G7A-C3-S3",
+            "title": "探索与表达规律",
+            "knowledge_points": [
+              "数列、图形规律的观察",
+              "用代数式表达一般项",
+              "由特殊到一般的归纳思想"
+            ],
+            "skill_refs": [
+              "S02",
+              "S05",
+              "S06"
+            ],
+            "typical_tasks": [
+              "图形点阵规律",
+              "日历规律",
+              "递推关系初步"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7A-C4",
+        "title": "基本平面图形",
+        "chapter_goal": "建立平面几何基本对象和度量意识，为后续几何推理打底。",
+        "sections": [
+          {
+            "section_id": "G7A-C4-S1",
+            "title": "线段、射线、直线",
+            "knowledge_points": [
+              "线段、射线、直线的区别",
+              "两点确定一条直线",
+              "线段长度比较",
+              "线段中点"
+            ],
+            "skill_refs": [
+              "S01",
+              "S10"
+            ],
+            "typical_tasks": [
+              "图形语言与符号语言转换",
+              "线段和差计算"
+            ]
+          },
+          {
+            "section_id": "G7A-C4-S2",
+            "title": "角",
+            "knowledge_points": [
+              "角的表示与度量",
+              "角的大小比较",
+              "角平分线",
+              "余角、补角初步"
+            ],
+            "skill_refs": [
+              "S01",
+              "S03",
+              "S10"
+            ],
+            "typical_tasks": [
+              "角度计算",
+              "角平分线相关求角"
+            ]
+          },
+          {
+            "section_id": "G7A-C4-S3",
+            "title": "多边形和圆的初步认识",
+            "knowledge_points": [
+              "多边形、顶点、边、内角",
+              "圆心、半径、直径、弧",
+              "基本图形分类与识别"
+            ],
+            "skill_refs": [
+              "S01",
+              "S10"
+            ],
+            "typical_tasks": [
+              "识别图形元素",
+              "基本图形组合分析"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7A-C5",
+        "title": "一元一次方程",
+        "chapter_goal": "形成方程思想，能用方程刻画实际问题中的等量关系。",
+        "sections": [
+          {
+            "section_id": "G7A-C5-S1",
+            "title": "认识方程",
+            "knowledge_points": [
+              "方程、未知数、方程的解",
+              "等式基本性质",
+              "由实际问题列方程"
+            ],
+            "skill_refs": [
+              "S01",
+              "S02",
+              "S07"
+            ],
+            "typical_tasks": [
+              "判断方程的解",
+              "根据等量关系列方程"
+            ]
+          },
+          {
+            "section_id": "G7A-C5-S2",
+            "title": "一元一次方程的解法",
+            "knowledge_points": [
+              "一元一次方程标准形式",
+              "去分母、去括号、移项、合并、系数化为 1",
+              "解方程步骤规范"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04",
+              "S15"
+            ],
+            "typical_tasks": [
+              "含括号和分母的一元一次方程",
+              "方程解法纠错"
+            ]
+          },
+          {
+            "section_id": "G7A-C5-S3",
+            "title": "一元一次方程的应用",
+            "knowledge_points": [
+              "行程、工程、销售、配套、年龄等模型",
+              "设未知数与单位统一",
+              "解后检验实际意义"
+            ],
+            "skill_refs": [
+              "S02",
+              "S07",
+              "S15"
+            ],
+            "typical_tasks": [
+              "应用题建模",
+              "根据题意验证解"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7A-C6",
+        "title": "数据的收集与整理",
+        "chapter_goal": "形成数据意识，理解数据从收集到表示的基本流程。",
+        "sections": [
+          {
+            "section_id": "G7A-C6-S1",
+            "title": "丰富的数据世界",
+            "knowledge_points": [
+              "数据来源",
+              "数据类型",
+              "用数据认识现实问题"
+            ],
+            "skill_refs": [
+              "S13"
+            ],
+            "typical_tasks": [
+              "识别数据问题",
+              "判断需要收集什么数据"
+            ]
+          },
+          {
+            "section_id": "G7A-C6-S2",
+            "title": "数据的收集",
+            "knowledge_points": [
+              "全面调查与抽样调查初步",
+              "调查问卷设计",
+              "样本代表性初步"
+            ],
+            "skill_refs": [
+              "S13",
+              "S15"
+            ],
+            "typical_tasks": [
+              "选择调查方式",
+              "发现调查设计问题"
+            ]
+          },
+          {
+            "section_id": "G7A-C6-S3",
+            "title": "数据的表示",
+            "knowledge_points": [
+              "统计表",
+              "条形图、折线图、扇形图",
+              "从统计图表读取信息"
+            ],
+            "skill_refs": [
+              "S05",
+              "S13"
+            ],
+            "typical_tasks": [
+              "画统计图",
+              "图表信息判断"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cross_semester_links_related_to_this_file": [
+    {
+      "from": "G7A-C2 有理数及其运算",
+      "to": "G7A-C3 整式及其加减",
+      "relationship": "由具体数运算过渡到字母和式的运算。"
+    },
+    {
+      "from": "G7A-C3 整式及其加减",
+      "to": "G7B-C1 整式的乘除",
+      "relationship": "由加减扩展到乘除和乘法公式，为因式分解与分式运算打基础。"
+    },
+    {
+      "from": "G7A-C5 一元一次方程",
+      "to": "G8A-C5 二元一次方程组",
+      "relationship": "由一个未知量一个等量关系扩展到多个未知量多个等量关系。"
+    }
+  ]
+}
