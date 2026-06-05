@@ -1,5 +1,12 @@
 # 抽取 Prompt 设计
 
+Last updated: 2026-06-05.
+
+Runtime context: extraction prompts are tool prompts, not orchestration prompts.
+They must return schema-constrained candidates only. Canonical writes still go
+through runtime task observations, reconciliation decisions, and review/edit
+services. See `docs/agent-runtime.md` and `docs/development-roadmap.md`.
+
 MathScout 的 LLM 抽取必须使用受 schema 约束的 JSON 输出。模型不能输出自由散文，也不能编造输入文本中没有证据支持的教材版本、地区、章节、教师或方法。
 
 ## 教师方法抽取

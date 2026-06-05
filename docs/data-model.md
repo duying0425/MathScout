@@ -1,5 +1,10 @@
 # Data Model Draft
 
+Last updated: 2026-06-05.
+
+For the detailed implementation plan, see
+[Development Roadmap](development-roadmap.md).
+
 This document summarizes the normalized schema. SQLAlchemy models live in
 `mathscout/db/models.py`.
 
@@ -71,6 +76,8 @@ This document summarizes the normalized schema. SQLAlchemy models live in
   - periodic metrics used by the AI orchestrator
   - includes chapter coverage, source yield, duplicate rate, conflict rate, average confidence,
     login-blocked count, failure count, budget usage, and novelty trend
+  - currently planned/documented; implement the write path when `quality_check`
+    tasks are added
 
 ## Manual Editing Rules
 
@@ -84,7 +91,25 @@ This document summarizes the normalized schema. SQLAlchemy models live in
 ## Job Tables
 
 - `crawl_jobs`
+  - DB-backed queue group created from a human goal, CLI command, or future
+    scheduled job
+  - stores source filter, extractor mode, strategy settings, and status
 - `crawl_tasks`
+  - DB-backed queue item
+  - current wired task types: `discover_links`, `crawl_url`
+  - next explicit task types: `fetch_url`, `parse_document`, `extract_methods`,
+    `reconcile_candidate`, `quality_check`, `review_action`
+  - `result_json` stores a normalized runtime observation with status,
+    artifact ids, metrics, warnings, retryability, review flags, and payload
+  - `not_before` stores delayed execution time for crawl-delay enforcement
+
+Current migration behavior:
+
+- `mathscout/db/migrations.py` contains lightweight additive schema checks for
+  the current local-first runtime.
+- App startup and `mathscout init-db` call `ensure_database_schema()`.
+- Alembic is still the target for serious PostgreSQL migrations, but current
+  local SQLite schema evolution should remain additive and non-destructive.
 
 ## Important Relationships
 
@@ -108,3 +133,17 @@ This document summarizes the normalized schema. SQLAlchemy models live in
   `quality_snapshots`
 - human changes must be auditable through `manual_edit_logs`; AI reconciliation
   should use those logs when deciding whether to skip, update, or request review
+
+## Schema Work Still Needed
+
+- Persist step-level task payloads for fetch, parse, extract, reconcile, and
+  quality check.
+- Add or finalize `quality_snapshots` if it is not yet represented in the
+  SQLAlchemy models.
+- Add human-lock metadata for curated canonical records.
+- Add cookie-profile metadata for user-authorized login sources.
+- Add embedding/vector metadata for retrieval once pgvector or another vector
+  store is chosen.
+- Add a real message/thread table only if Agent Console multi-turn memory
+  requires more than `natural_language_commands`, `orchestration_sessions`,
+  `agent_decisions`, and `crawl_jobs`.

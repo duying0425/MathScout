@@ -67,8 +67,109 @@ def test_crawl_pipeline_marks_http_error_as_fetch_failed(tmp_path) -> None:
         document = session.scalar(select(SourceDocument))
 
     assert result["status"] == "fetch_failed"
+    assert result["runtime_status"] == "failed"
+    assert result["requires_review"] is False
     assert result["http_status"] == 400
     assert result["candidates"] == 0
+    assert document is not None
+    assert document.status == CrawlStatus.failed
+
+
+def test_crawl_pipeline_marks_login_fetch_as_review_required(tmp_path) -> None:
+    raw_path = tmp_path / "login.html"
+    raw_path.write_text("<html><body>请先登录后查看完整内容。</body></html>", encoding="utf-8")
+
+    class FakeFetcher:
+        settings = SimpleNamespace(text_storage_dir=tmp_path)
+
+        async def fetch(self, url: str) -> FetchResult:
+            return FetchResult(
+                url=url,
+                status_code=200,
+                content_type="text/html",
+                checksum="login-page",
+                raw_path=raw_path,
+                needs_login=True,
+            )
+
+    session_factory = _session_factory()
+    with session_factory() as session:
+        pipeline = CrawlPipeline(session, extractor_mode="rule")
+        pipeline.fetcher = FakeFetcher()
+
+        result = pipeline.crawl_url("https://example.com/private")
+        document = session.scalar(select(SourceDocument))
+
+    assert result["status"] == "blocked_login"
+    assert result["runtime_status"] == "blocked"
+    assert result["requires_review"] is True
+    assert result["review_reason"] == "页面需要登录或访问受限，需要人工复核。"
+    assert document is not None
+    assert document.status == CrawlStatus.blocked
+    assert document.needs_login is True
+
+
+def test_crawl_pipeline_marks_empty_text_as_fetch_failed(tmp_path) -> None:
+    raw_path = tmp_path / "empty.html"
+    raw_path.write_text("<html><body> </body></html>", encoding="utf-8")
+
+    class FakeFetcher:
+        settings = SimpleNamespace(text_storage_dir=tmp_path)
+
+        async def fetch(self, url: str) -> FetchResult:
+            return FetchResult(
+                url=url,
+                status_code=200,
+                content_type="text/html",
+                checksum="empty-page",
+                raw_path=raw_path,
+                needs_login=False,
+            )
+
+    session_factory = _session_factory()
+    with session_factory() as session:
+        pipeline = CrawlPipeline(session, extractor_mode="rule")
+        pipeline.fetcher = FakeFetcher()
+
+        result = pipeline.crawl_url("https://example.com/empty")
+        document = session.scalar(select(SourceDocument))
+
+    assert result["status"] == "fetch_failed"
+    assert result["runtime_status"] == "failed"
+    assert result["retryable"] is False
+    assert result["error"] == "页面正文过短，没有可用于抽取的内容。"
+    assert document is not None
+    assert document.status == CrawlStatus.failed
+
+
+def test_crawl_pipeline_rejects_unsupported_content_type(tmp_path) -> None:
+    raw_path = tmp_path / "logo.png"
+    raw_path.write_bytes(b"\x89PNG\r\n")
+
+    class FakeFetcher:
+        settings = SimpleNamespace(text_storage_dir=tmp_path)
+
+        async def fetch(self, url: str) -> FetchResult:
+            return FetchResult(
+                url=url,
+                status_code=200,
+                content_type="image/png",
+                checksum="image-page",
+                raw_path=raw_path,
+                needs_login=False,
+            )
+
+    session_factory = _session_factory()
+    with session_factory() as session:
+        pipeline = CrawlPipeline(session, extractor_mode="rule")
+        pipeline.fetcher = FakeFetcher()
+
+        result = pipeline.crawl_url("https://example.com/logo.png")
+        document = session.scalar(select(SourceDocument))
+
+    assert result["status"] == "fetch_failed"
+    assert result["runtime_status"] == "failed"
+    assert result["error"] == "不支持抽取该内容类型：image/png。"
     assert document is not None
     assert document.status == CrawlStatus.failed
 
@@ -160,7 +261,32 @@ def test_blocked_job_resume_rechecks_blocked_tasks(monkeypatch) -> None:
                 },
             )
 
+    class FakeCrawlPipeline:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def crawl_url(self, url: str):
+            return {
+                "url": url,
+                "http_status": 200,
+                "document_id": "fake-document",
+                "status": "succeeded",
+                "runtime_status": "succeeded",
+                "artifact_ids": ["fake-document"],
+                "metrics": {"http_status": 200, "candidates": 0, "methods": 0, "variants": 0},
+                "warnings": [],
+                "error": None,
+                "retryable": True,
+                "requires_review": False,
+                "review_reason": None,
+                "payload": {"url": url},
+                "candidates": 0,
+                "methods": 0,
+                "variants": 0,
+            }
+
     monkeypatch.setattr(job_module, "SourceDiscoveryAgent", FakeSourceDiscoveryAgent)
+    monkeypatch.setattr(job_module, "CrawlPipeline", FakeCrawlPipeline)
     session_factory = _session_factory()
     with session_factory() as session:
         job = CrawlJob(name="test", status=CrawlStatus.blocked, source_filter={})

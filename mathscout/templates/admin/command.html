@@ -16,6 +16,8 @@
         margin: 0;
       }
 
+{% include "admin/_shared_styles.html" %}
+
       header {
         align-items: center;
         background: #ffffff;
@@ -161,10 +163,8 @@
     </style>
   </head>
   <body>
-    <header>
-      <a href="/admin">后台首页</a>
-      <h1>AI 指令中心</h1>
-    </header>
+    {% set page_title = "AI 指令中心" %}
+    {% include "admin/_header.html" %}
     <main>
       <form class="command-form" method="post" action="/admin/command">
         <label>

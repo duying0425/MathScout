@@ -16,6 +16,8 @@
         margin: 0;
       }
 
+{% include "admin/_shared_styles.html" %}
+
       header {
         align-items: center;
         background: #ffffff;
@@ -168,10 +170,11 @@
     </style>
   </head>
   <body data-job-id="{{ job.id }}">
-    <header>
-      <a href="/admin/crawl-jobs">任务</a>
-      <h1>{{ job.name }}</h1>
-      <div class="actions">
+    {% set page_title = "任务详情" %}
+    {% include "admin/_header.html" %}
+    <main>
+      <div class="actions page-toolbar">
+        <a href="/admin/crawl-jobs">返回任务列表</a>
         {% if job.can_run %}
           <form method="post" action="/admin/crawl-jobs/{{ job.id }}/run">
             <select name="extractor_mode" aria-label="抽取模式">
@@ -193,8 +196,11 @@
           </form>
         {% endif %}
       </div>
-    </header>
-    <main>
+
+      <section class="section" aria-label="任务名称">
+        <h1>{{ job.name }}</h1>
+      </section>
+
       <section class="grid" aria-label="任务概览">
         <div class="metric">
           <div class="metric-label">状态</div>
@@ -249,6 +255,7 @@
                   <th>变体</th>
                   <th>说明</th>
                   <th>错误</th>
+                  <th>下次执行</th>
                   <th>更新时间</th>
                 </tr>
               </thead>
@@ -267,6 +274,7 @@
                     <td>{{ task.variants }}</td>
                     <td>{{ task.note }}</td>
                     <td>{{ task.error }}</td>
+                    <td>{{ task.not_before }}</td>
                     <td>{{ task.updated }}</td>
                   </tr>
                 {% endfor %}
@@ -373,6 +381,7 @@
               "variants",
               "note",
               "error",
+              "not_before",
               "updated",
             ],
           );

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -9,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from mathscout.config import get_settings
-from mathscout.crawler.fetchers import HttpFetcher
+from mathscout.crawler.fetchers import FetchResult, HttpFetcher
 from mathscout.db.models import (
     AccessLevel,
     CandidateItemType,
@@ -34,7 +35,58 @@ from mathscout.extraction.rule_based import RuleBasedMethodExtractor
 from mathscout.extraction.schemas import CandidateKnowledgeItemSchema
 from mathscout.parsers.html import html_to_text
 from mathscout.parsers.pdf import pdf_to_text
+from mathscout.runtime import FetchObservation, RuntimeObservation, RuntimeStatus
 from mathscout.utils.text import normalize_semantic_key
+
+UNSUPPORTED_CONTENT_TYPE_PREFIXES = ("image/", "audio/", "video/", "font/")
+UNSUPPORTED_CONTENT_TYPES = {
+    "application/octet-stream",
+    "application/zip",
+    "application/x-7z-compressed",
+    "application/x-rar-compressed",
+    "application/x-zip-compressed",
+}
+SUPPORTED_CONTENT_MARKERS = ("html", "pdf", "text", "json", "xml")
+SUPPORTED_URL_SUFFIXES = {".html", ".htm", ".pdf", ".txt", ".json", ".xml"}
+EMPTY_TEXT_MIN_CHARS = 40
+BOILERPLATE_TEXT_MAX_CHARS = 240
+BOILERPLATE_MARKERS = (
+    "enable javascript",
+    "please enable javascript",
+    "请启用javascript",
+    "请启用 javascript",
+    "请开启javascript",
+    "请开启 javascript",
+    "404 not found",
+    "page not found",
+)
+
+
+@dataclass(frozen=True)
+class ParsedDocument:
+    requested_url: str
+    fetch_result: FetchResult
+    site: SourceSite
+    text: str
+    text_path: Path
+    document: SourceDocument
+
+
+@dataclass(frozen=True)
+class ReconciledCandidateResult:
+    candidate: CandidateKnowledgeItem
+    method: TeachingMethod
+    method_created: bool
+    variant_created: bool
+
+
+@dataclass(frozen=True)
+class ExtractionToolResult:
+    extraction_run: ExtractionRun
+    candidate_count: int
+    method_count: int
+    variant_count: int
+    error: str | None
 
 
 class CrawlPipeline:
@@ -44,14 +96,38 @@ class CrawlPipeline:
         self.fetcher = HttpFetcher()
         self.extractor_mode = extractor_mode
 
-    def crawl_url(self, url: str) -> dict[str, int | str | bool]:
-        result = asyncio.run(self.fetcher.fetch(url))
+    def crawl_url(self, url: str) -> dict[str, object]:
+        result = self.fetch_url(url)
+        parsed = self.parse_document(url, result)
+        fetch_stop_result = self._after_fetch_check(
+            requested_url=parsed.requested_url,
+            result=result,
+            document=parsed.document,
+            text=parsed.text,
+            text_path=parsed.text_path,
+        )
+        if fetch_stop_result is not None:
+            self.session.commit()
+            return fetch_stop_result
+
+        extraction = self.extract_methods(
+            document=parsed.document,
+            document_url=result.url,
+            text=parsed.text,
+        )
+        self.session.commit()
+        return self._crawl_success_result(parsed, extraction)
+
+    def fetch_url(self, url: str) -> FetchResult:
+        return asyncio.run(self.fetcher.fetch(url))
+
+    def parse_document(self, requested_url: str, result: FetchResult) -> ParsedDocument:
         site = self._get_or_create_site(result.url)
         text = self._parse_fetch_result(result.raw_path, result.content_type)
         text_path = self._write_text(result.checksum, text)
         document = self._upsert_document(
             site=site,
-            url=url,
+            url=requested_url,
             canonical_url=result.url,
             status_code=result.status_code,
             content_type=result.content_type,
@@ -60,32 +136,22 @@ class CrawlPipeline:
             text_path=text_path,
             needs_login=result.needs_login,
         )
-        if result.status_code >= 400 and not result.needs_login:
-            document.status = CrawlStatus.failed
-            self.session.commit()
-            return {
-                "url": result.url,
-                "http_status": result.status_code,
-                "document_id": str(document.id),
-                "status": "fetch_failed",
-                "error": f"HTTP {result.status_code}，没有可用于抽取的正文。",
-                "retryable": result.status_code == 429 or result.status_code >= 500,
-                "candidates": 0,
-                "methods": 0,
-                "variants": 0,
-            }
-        if result.needs_login:
-            self.session.commit()
-            return {
-                "url": result.url,
-                "http_status": result.status_code,
-                "document_id": str(document.id),
-                "status": "blocked_login",
-                "candidates": 0,
-                "methods": 0,
-                "variants": 0,
-            }
+        return ParsedDocument(
+            requested_url=requested_url,
+            fetch_result=result,
+            site=site,
+            text=text,
+            text_path=text_path,
+            document=document,
+        )
 
+    def extract_methods(
+        self,
+        *,
+        document: SourceDocument,
+        document_url: str,
+        text: str,
+    ) -> ExtractionToolResult:
         extractor_name, extractor_version, model_name = self._extractor_metadata()
         extraction_run = ExtractionRun(
             document_id=document.id,
@@ -99,51 +165,21 @@ class CrawlPipeline:
         self.session.add(extraction_run)
         self.session.flush()
 
-        candidates, extraction_error = self._extract_candidates(text, result.url)
+        candidates, extraction_error = self._extract_candidates(text, document_url)
         created_candidates = 0
         created_methods = 0
         created_variants = 0
         for candidate_schema in candidates:
-            evidence = self._create_evidence(document, candidate_schema.evidence[0].snippet or "")
-            candidate = CandidateKnowledgeItem(
-                document_id=document.id,
-                extraction_run_id=extraction_run.id,
-                item_type=CandidateItemType.teaching_method,
-                title=candidate_schema.title,
-                semantic_key=candidate_schema.semantic_key,
-                textbook_series=candidate_schema.textbook_series,
-                book_code=candidate_schema.book_code,
-                chapter_title=candidate_schema.chapter_title,
-                section_title=candidate_schema.section_title,
-                payload=candidate_schema.payload,
-                evidence_ids=[str(evidence.id)],
-                confidence=candidate_schema.confidence,
-                review_status=ReviewStatus.pending,
-            )
-            self.session.add(candidate)
-            self.session.flush()
-            created_candidates += 1
-
-            method, method_created = self._upsert_method_from_candidate(candidate, evidence.id)
-            if method_created:
-                created_methods += 1
-            variant_created = self._create_variant_from_candidate(
-                method=method,
+            reconciled = self.reconcile_candidate(
                 document=document,
-                evidence=evidence,
-                candidate=candidate,
+                extraction_run=extraction_run,
+                candidate_schema=candidate_schema,
             )
-            if variant_created:
+            created_candidates += 1
+            if reconciled.method_created:
+                created_methods += 1
+            if reconciled.variant_created:
                 created_variants += 1
-            self._record_reconciliation_decision(
-                candidate=candidate,
-                method=method,
-                action=ReconciliationAction.create
-                if method_created
-                else ReconciliationAction.create_variant
-                if variant_created
-                else ReconciliationAction.skip,
-            )
 
         extraction_run.output_json = {
             "candidate_count": created_candidates,
@@ -152,16 +188,282 @@ class CrawlPipeline:
             "extractor_mode": self.extractor_mode,
             "error": extraction_error,
         }
-        self.session.commit()
+        return ExtractionToolResult(
+            extraction_run=extraction_run,
+            candidate_count=created_candidates,
+            method_count=created_methods,
+            variant_count=created_variants,
+            error=extraction_error,
+        )
+
+    def reconcile_candidate(
+        self,
+        *,
+        document: SourceDocument,
+        extraction_run: ExtractionRun,
+        candidate_schema: CandidateKnowledgeItemSchema,
+    ) -> ReconciledCandidateResult:
+        evidence = self._create_evidence(document, candidate_schema.evidence[0].snippet or "")
+        candidate = CandidateKnowledgeItem(
+            document_id=document.id,
+            extraction_run_id=extraction_run.id,
+            item_type=CandidateItemType.teaching_method,
+            title=candidate_schema.title,
+            semantic_key=candidate_schema.semantic_key,
+            textbook_series=candidate_schema.textbook_series,
+            book_code=candidate_schema.book_code,
+            chapter_title=candidate_schema.chapter_title,
+            section_title=candidate_schema.section_title,
+            payload=candidate_schema.payload,
+            evidence_ids=[str(evidence.id)],
+            confidence=candidate_schema.confidence,
+            review_status=ReviewStatus.pending,
+        )
+        self.session.add(candidate)
+        self.session.flush()
+
+        method, method_created = self._upsert_method_from_candidate(candidate, evidence.id)
+        variant_created = self._create_variant_from_candidate(
+            method=method,
+            document=document,
+            evidence=evidence,
+            candidate=candidate,
+        )
+        self._record_reconciliation_decision(
+            candidate=candidate,
+            method=method,
+            action=ReconciliationAction.create
+            if method_created
+            else ReconciliationAction.create_variant
+            if variant_created
+            else ReconciliationAction.skip,
+        )
+        return ReconciledCandidateResult(
+            candidate=candidate,
+            method=method,
+            method_created=method_created,
+            variant_created=variant_created,
+        )
+
+    def _crawl_success_result(
+        self,
+        parsed: ParsedDocument,
+        extraction: ExtractionToolResult,
+    ) -> dict[str, object]:
+        result = parsed.fetch_result
+        document = parsed.document
+        observation = RuntimeObservation.success(
+            artifact_ids=[str(document.id)],
+            metrics={
+                "http_status": result.status_code,
+                "candidates": extraction.candidate_count,
+                "methods": extraction.method_count,
+                "variants": extraction.variant_count,
+            },
+            payload={
+                "hook": "crawl_url",
+                "url": parsed.requested_url,
+                "final_url": result.url,
+                "content_type": result.content_type,
+                "text_chars": len(parsed.text.strip()),
+                "document_id": str(document.id),
+                "extraction_run_id": str(extraction.extraction_run.id),
+            },
+        )
         return {
             "url": result.url,
             "http_status": result.status_code,
             "document_id": str(document.id),
             "status": "succeeded",
-            "candidates": created_candidates,
-            "methods": created_methods,
-            "variants": created_variants,
+            "runtime_status": observation.status.value,
+            "artifact_ids": observation.artifact_ids,
+            "metrics": observation.metrics,
+            "warnings": observation.warnings,
+            "error": observation.error,
+            "retryable": observation.retryable,
+            "requires_review": observation.requires_review,
+            "review_reason": observation.review_reason,
+            "payload": observation.payload,
+            "candidates": extraction.candidate_count,
+            "methods": extraction.method_count,
+            "variants": extraction.variant_count,
         }
+
+    def _after_fetch_check(
+        self,
+        *,
+        requested_url: str,
+        result,
+        document: SourceDocument,
+        text: str,
+        text_path: Path,
+    ) -> dict[str, object] | None:
+        payload = {
+            "hook": "after_fetch",
+            "url": requested_url,
+            "final_url": result.url,
+            "content_type": result.content_type,
+            "raw_path": str(result.raw_path),
+            "text_path": str(text_path),
+            "text_chars": len(text.strip()),
+            "document_id": str(document.id),
+        }
+        if result.needs_login:
+            document.status = CrawlStatus.blocked
+            reason = "页面需要登录或访问受限，需要人工复核。"
+            observation = FetchObservation(
+                status=RuntimeStatus.blocked,
+                artifact_ids=[str(document.id)],
+                error=None,
+                retryable=False,
+                requires_review=True,
+                review_reason=reason,
+                payload=payload,
+                url=requested_url,
+                final_url=result.url,
+                http_status=result.status_code,
+                content_type=result.content_type,
+                raw_path=str(result.raw_path),
+                text_path=str(text_path),
+                needs_login=True,
+            )
+            return self._fetch_stop_result(
+                observation=observation,
+                document=document,
+                legacy_status="blocked_login",
+                legacy_error=reason,
+            )
+        if result.status_code >= 400:
+            document.status = CrawlStatus.failed
+            retryable = result.status_code == 429 or result.status_code >= 500
+            error = f"HTTP {result.status_code}，没有可用于抽取的正文。"
+            observation = FetchObservation(
+                status=RuntimeStatus.failed,
+                artifact_ids=[str(document.id)],
+                error=error,
+                retryable=retryable,
+                payload=payload,
+                url=requested_url,
+                final_url=result.url,
+                http_status=result.status_code,
+                content_type=result.content_type,
+                raw_path=str(result.raw_path),
+                text_path=str(text_path),
+                needs_login=False,
+            )
+            return self._fetch_stop_result(
+                observation=observation,
+                document=document,
+                legacy_status="fetch_failed",
+                legacy_error=error,
+            )
+        unsupported_reason = self._unsupported_content_reason(result.url, result.content_type)
+        if unsupported_reason is not None:
+            document.status = CrawlStatus.failed
+            observation = FetchObservation(
+                status=RuntimeStatus.failed,
+                artifact_ids=[str(document.id)],
+                error=unsupported_reason,
+                retryable=False,
+                warnings=[unsupported_reason],
+                payload=payload,
+                url=requested_url,
+                final_url=result.url,
+                http_status=result.status_code,
+                content_type=result.content_type,
+                raw_path=str(result.raw_path),
+                text_path=str(text_path),
+                needs_login=False,
+            )
+            return self._fetch_stop_result(
+                observation=observation,
+                document=document,
+                legacy_status="fetch_failed",
+                legacy_error=unsupported_reason,
+            )
+        text_reason = self._low_value_text_reason(text)
+        if text_reason is not None:
+            document.status = CrawlStatus.failed
+            observation = FetchObservation(
+                status=RuntimeStatus.failed,
+                artifact_ids=[str(document.id)],
+                error=text_reason,
+                retryable=False,
+                warnings=[text_reason],
+                payload=payload,
+                url=requested_url,
+                final_url=result.url,
+                http_status=result.status_code,
+                content_type=result.content_type,
+                raw_path=str(result.raw_path),
+                text_path=str(text_path),
+                needs_login=False,
+            )
+            return self._fetch_stop_result(
+                observation=observation,
+                document=document,
+                legacy_status="fetch_failed",
+                legacy_error=text_reason,
+            )
+        return None
+
+    def _fetch_stop_result(
+        self,
+        *,
+        observation: FetchObservation,
+        document: SourceDocument,
+        legacy_status: str,
+        legacy_error: str,
+    ) -> dict[str, object]:
+        return {
+            "url": observation.final_url or observation.url,
+            "http_status": observation.http_status,
+            "document_id": str(document.id),
+            "status": legacy_status,
+            "runtime_status": observation.status.value,
+            "artifact_ids": observation.artifact_ids,
+            "metrics": observation.metrics,
+            "warnings": observation.warnings,
+            "error": legacy_error,
+            "retryable": observation.retryable,
+            "requires_review": observation.requires_review,
+            "review_reason": observation.review_reason,
+            "payload": observation.payload,
+            "content_type": observation.content_type,
+            "candidates": 0,
+            "methods": 0,
+            "variants": 0,
+        }
+
+    def _unsupported_content_reason(
+        self,
+        url: str,
+        content_type: str | None,
+    ) -> str | None:
+        parsed_content_type = (content_type or "").split(";", 1)[0].strip().lower()
+        suffix = Path(urlparse(url).path).suffix.lower()
+        if suffix in SUPPORTED_URL_SUFFIXES:
+            return None
+        if not parsed_content_type:
+            return None
+        if parsed_content_type.startswith(UNSUPPORTED_CONTENT_TYPE_PREFIXES):
+            return f"不支持抽取该内容类型：{parsed_content_type}。"
+        if parsed_content_type in UNSUPPORTED_CONTENT_TYPES:
+            return f"不支持抽取该内容类型：{parsed_content_type}。"
+        if any(marker in parsed_content_type for marker in SUPPORTED_CONTENT_MARKERS):
+            return None
+        return f"不支持抽取该内容类型：{parsed_content_type}。"
+
+    def _low_value_text_reason(self, text: str) -> str | None:
+        compact_text = " ".join(text.split())
+        if len(compact_text) < EMPTY_TEXT_MIN_CHARS:
+            return "页面正文过短，没有可用于抽取的内容。"
+        lowered = compact_text.lower()
+        if len(compact_text) <= BOILERPLATE_TEXT_MAX_CHARS and any(
+            marker in lowered or marker in compact_text for marker in BOILERPLATE_MARKERS
+        ):
+            return "页面正文疑似为空壳或错误提示，没有可用于抽取的内容。"
+        return None
 
     def _extractor_metadata(self) -> tuple[str, str, str | None]:
         if self._should_use_ai():

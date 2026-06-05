@@ -1,5 +1,11 @@
 # MathScout Architecture
 
+Last updated: 2026-06-05.
+
+For the implementation roadmap and detailed next work, see
+[Development Roadmap](development-roadmap.md). This document describes the
+target architecture and the long-term product shape.
+
 ## 1. Product Scope
 
 MathScout should become an AI-managed knowledge-base maintenance system, not
@@ -87,6 +93,24 @@ The system still enforces hard guardrails with deterministic code:
 - no destructive deletion without explicit human approval
 - no publishing high-risk conflicts without review
 - no storing or republishing full copyrighted resources as canonical output
+
+See [Agent Runtime](agent-runtime.md) for the concrete execution contract that
+maps this operating model to tasks, tools, observations, hooks, and review
+actions.
+
+Current implementation direction:
+
+- The primary operator surface is the Web Agent Console at `/admin/agent`.
+- The CLI is a setup, smoke-test, and emergency-maintenance interface.
+- Runtime execution is currently DB-backed through `crawl_jobs` and
+  `crawl_tasks`.
+- `crawl_url` is still a compatibility wrapper, but internally it now delegates
+  to explicit `fetch_url`, `parse_document`, `extract_methods`, and
+  `reconcile_candidate` methods.
+- Crawl delay uses `crawl_tasks.not_before`; Web status polling triggers due
+  pending jobs to resume.
+- A dedicated always-on worker or graph runner should be added only after task
+  payload and observation contracts stabilize.
 
 ## 3. Source Strategy
 
@@ -323,9 +347,11 @@ that reads tasks, writes structured outputs, and records confidence.
 - `QualityMonitorAgent`: measures coverage, duplicate rate, conflict rate, source usefulness, and extraction confidence.
 - `StopConditionAgent`: recommends stop/pause/continue based on configured goals and quality metrics.
 
-Implementation detail: start with Celery tasks. If later we need more explicit
-agent state, introduce LangGraph or a custom state machine behind the same task
-interfaces.
+Implementation detail: start with the current DB-backed task runtime. Add a
+dedicated worker loop when step-level task contracts stabilize. Celery,
+APScheduler, LangGraph, or a custom state machine can be introduced later behind
+the same task and observation interfaces if the queue becomes too complex for a
+plain DB worker.
 
 ## 7. Login and Cookie Flow
 
@@ -345,7 +371,7 @@ shared across domains or exported in logs.
 First admin views:
 
 - Dashboard: source count, crawl jobs, fetched docs, extraction volume, review queue.
-- AI Command Center: chat with the orchestrator, set goals, change scope, pause or resume work.
+- Agent Console: chat with the orchestrator, set goals, change scope, pause or resume work.
 - AI Plan View: current goal, active plan, source priorities, budgets, stop conditions, and next actions.
 - Sources: domain settings, access level, rate limits, robots status, enabled/disabled.
 - Crawl Jobs: status, retries, errors, fetched documents.
@@ -379,6 +405,9 @@ resources are usually copyrighted even if they can be viewed online.
 
 ## 10. Development Roadmap
 
+The detailed active roadmap lives in [Development Roadmap](development-roadmap.md).
+The phase list below is the target architecture sequence.
+
 ### Phase 0: Skeleton
 
 - Project structure, config, database models, Docker Compose.
@@ -403,6 +432,8 @@ resources are usually copyrighted even if they can be viewed online.
 - Implement JSON-schema extraction.
 - Add candidate records, retrieval, reconciliation decisions, deduplication, and conflict detection.
 - Build review UI.
+- Persist fetch, parse, extract, reconcile, quality-check, and review actions as
+  explicit DB task types.
 
 ### Phase 4: Scale
 
@@ -419,3 +450,7 @@ resources are usually copyrighted even if they can be viewed online.
 - Whether authenticated sources are for private research only or can contribute to shared published summaries.
 - Whether examples and problem statements should be stored verbatim, paraphrased, or only used as evidence for extracted methods.
 - Which actions can be auto-applied by the AI in the early version, and which must remain review-only until enough audit data exists.
+- When to replace Web-polling-driven due ticks with an independent always-on
+  worker.
+- Whether multi-turn Agent Console memory needs a dedicated message table or can
+  continue using command/session/decision/job tables.

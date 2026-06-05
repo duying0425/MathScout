@@ -2,9 +2,14 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from mathscout.agents.source_discovery import PolicyGuardAgent, SourceDiscoveryAgent
+from mathscout.config import Settings
 from mathscout.db.base import Base
 from mathscout.db.models import CrawlJob, CrawlStatus, CrawlTask
 from mathscout.pipeline.jobs import CrawlJobRunner, _fallback_seed_link, _seed_crawl_link
+
+
+def _rule_discovery_agent() -> SourceDiscoveryAgent:
+    return SourceDiscoveryAgent(settings=Settings(AI_PROVIDER="rule"))
 
 
 def test_source_discovery_scores_teaching_links() -> None:
@@ -19,7 +24,7 @@ def test_source_discovery_scores_teaching_links() -> None:
       </body>
     </html>
     """
-    links = SourceDiscoveryAgent().discover_from_html(
+    links = _rule_discovery_agent().discover_from_html(
         html=html,
         seed_url="https://example.com/index.html",
         objective="优先补充七年级上册有理数的教师解题方法",
@@ -64,7 +69,7 @@ def test_source_discovery_ignores_non_math_and_generic_catalog_links() -> None:
       </body>
     </html>
     """
-    links = SourceDiscoveryAgent().discover_from_html(
+    links = _rule_discovery_agent().discover_from_html(
         html=html,
         seed_url="https://example.com/index.html",
         objective="收集初中数学一元一次方程的教师解题方法",
@@ -91,7 +96,7 @@ def test_source_discovery_prefers_junior_middle_when_objective_targets_junior() 
     </html>
     """
 
-    links = SourceDiscoveryAgent().discover_from_html(
+    links = _rule_discovery_agent().discover_from_html(
         html=html,
         seed_url="https://example.com/index.html",
         objective="收集初中数学教材章节的教师解题方法",

@@ -16,6 +16,8 @@
         margin: 0;
       }
 
+{% include "admin/_shared_styles.html" %}
+
       header {
         align-items: center;
         background: #ffffff;
@@ -146,15 +148,8 @@
     </style>
   </head>
   <body>
-    <header>
-      <h1>MathScout 后台</h1>
-      <nav aria-label="后台导航">
-        <a href="/admin/command">AI 指令</a>
-        <a href="/admin/crawl-jobs">任务</a>
-        <a href="/admin/review">复核</a>
-        <a href="/admin/documents">文档</a>
-      </nav>
-    </header>
+    {% set page_title = "控制台" %}
+    {% include "admin/_header.html" %}
     <main>
       <section class="grid" aria-label="后台概览">
         {% for card in cards %}

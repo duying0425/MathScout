@@ -218,3 +218,42 @@ def test_execution_monitor_can_pause_job_and_create_audit(monkeypatch) -> None:
 
     assert job.status == CrawlStatus.paused
     assert review_items == []
+
+
+def test_execution_monitor_stop_job_does_not_override_failed_tasks(monkeypatch) -> None:
+    class FakeExecutionMonitorAgent:
+        def evaluate_task(self, **kwargs):
+            return ExecutionMonitorDecision(
+                action="stop_job",
+                rationale="AI thinks enough data has been collected.",
+                confidence=0.82,
+            )
+
+    monkeypatch.setattr(job_module, "ExecutionMonitorAgent", FakeExecutionMonitorAgent)
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+
+    with session_factory() as session:
+        job = CrawlJob(name="test", status=CrawlStatus.running, source_filter={})
+        session.add(job)
+        session.flush()
+        task = CrawlTask(
+            job_id=job.id,
+            url="https://example.com/page",
+            task_type="discover_links",
+            status=CrawlStatus.failed,
+            result_json={"status": "failed"},
+        )
+        session.add(task)
+        session.flush()
+
+        CrawlJobRunner(session)._apply_execution_monitor_decision(
+            job,
+            task,
+            {"status": "failed", "error": "HTTP 400"},
+        )
+        session.commit()
+
+    assert job.status == CrawlStatus.failed

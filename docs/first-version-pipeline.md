@@ -1,10 +1,29 @@
 # First Version Pipeline
 
+Last updated: 2026-06-05.
+
+For the detailed roadmap beyond the first runnable version, see
+[Development Roadmap](development-roadmap.md).
+
 The first implementation is intentionally small and runnable. It proves the
 database update loop and now includes an LLM-first multi-agent control plane with
 deterministic fallbacks for local/offline runs.
 
 ## Commands
+
+The primary product-facing flow is the Web Agent Console:
+
+```text
+http://127.0.0.1:8000/admin/agent
+```
+
+Users can type a goal such as:
+
+```text
+请帮我抓取http://www.example.com/test下的数据，优先提取初中数学教师解题方法。
+```
+
+The CLI remains useful for setup, smoke tests, and emergency control:
 
 ```powershell
 mathscout init-db
@@ -44,6 +63,15 @@ mathscout stop-job "<job_id>"
 12. If candidate text contains an existing knowledge point title, it creates:
     - `method_knowledge_point_links`
     - `method_section_links`
+13. Runs deterministic runtime hooks for URL validity, source access policy,
+    robots, crawl delay, HTTP failures, login gates, unsupported content, empty
+    pages, and boilerplate pages.
+14. Stores normalized runtime observations in `crawl_tasks.result_json`.
+15. Routes review actions through `ReviewService` and writes `manual_edit_logs`.
+
+`CrawlPipeline.crawl_url()` remains the compatibility wrapper, but internally it
+now delegates to `fetch_url`, `parse_document`, `extract_methods`, and
+`reconcile_candidate` methods.
 
 ## Current Limits
 
@@ -54,10 +82,17 @@ mathscout stop-job "<job_id>"
   source selection, execution monitoring, and reconciliation fall back to local deterministic behavior.
 - Course mapping only uses simple knowledge-point title matching.
 - Crawling can run as a persistent DB-backed job, but it still processes URLs sequentially.
-- Robots and per-domain scheduling are designed but not yet wired into the CLI pipeline.
+- Robots and per-domain crawl delay are wired into the DB-backed job runtime.
+  Crawl delay defers tasks through `crawl_tasks.not_before` rather than sleeping
+  inside the worker.
+- Due pending jobs currently resume through Web status polling; there is not yet
+  an independent always-on worker process.
 - Admin viewing pages are database-backed, but edit workflows are still incomplete.
+- Fetch, parse, extract, and reconcile are internal method boundaries, not yet
+  persisted as separate DB task types.
 
 ## Next Step
 
-Add retrieval/vector search and manual review/edit workflows so the AI agents can
-compare candidates against richer context and route risky decisions to humans.
+Persist fetch/parse/extract/reconcile as explicit DB task types, then add
+quality-check tasks, source-yield metrics, review detail/edit pages,
+Playwright/cookie-profile fetching, and retrieval/vector search.

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import re
+import threading
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -25,12 +28,10 @@ from mathscout.db.models import (
     CrawlStatus,
     CrawlTask,
     KnowledgePoint,
-    ManualEditAction,
     ManualEditLog,
     NaturalLanguageCommand,
     OrchestrationSession,
     OrchestrationStatus,
-    ReconciliationDecision,
     ReviewItem,
     ReviewStatus,
     Section,
@@ -38,19 +39,29 @@ from mathscout.db.models import (
     SourceSite,
     StudentSkill,
     TeachingMethod,
-    TeachingMethodVariant,
     TextbookSeries,
 )
 from mathscout.db.session import SessionLocal, get_session
 from mathscout.orchestration.schemas import NaturalLanguageDirective, OrchestrationContext
-from mathscout.pipeline.jobs import CrawlJobRunner
+from mathscout.pipeline.jobs import CrawlJobDispatcher, CrawlJobRunner
+from mathscout.review import ReviewActionError, ReviewService
 from mathscout.utils.time import display_datetime
 
 templates = Jinja2Templates(directory="mathscout/templates")
 router = APIRouter()
 AdminSession = Annotated[Session, Depends(get_session)]
+_due_crawl_jobs_lock = threading.Lock()
 
-URL_RE = re.compile(r"https?://[^\s<>\"]+")
+URL_RE = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+URL_TRAILING_CHARS = ".,;:!?)]}" + "\u3002\uff0c\uff1b\uff1a\uff01\uff1f\u3001\uff09\u3011\u300b"
+URL_ATTACHED_TEXT_MARKERS = (
+    "\u4e0b\u7684\u6570\u636e",
+    "\u4e0b\u7684\u5185\u5bb9",
+    "\u91cc\u7684\u6570\u636e",
+    "\u91cc\u7684\u5185\u5bb9",
+    "\u7684\u6570\u636e",
+    "\u7684\u5185\u5bb9",
+)
 DISPLAY_TEXT = {
     "active": "运行中",
     "paused": "已暂停",
@@ -108,14 +119,23 @@ DISPLAY_TEXT = {
 }
 
 
+@dataclass(frozen=True)
+class AgentCommandResult:
+    orchestration_session: OrchestrationSession
+    command: NaturalLanguageCommand
+    job: CrawlJob | None
+    extractor_mode: str
+    auto_start: bool
+
+
 @router.get("")
 @router.get("/")
 def dashboard(request: Request, session: AdminSession):
     cards = [
         {
-            "label": "AI 指令",
+            "label": "Agent",
             "value": _count(session, NaturalLanguageCommand),
-            "href": "/admin/command",
+            "href": "/admin/agent",
         },
         {
             "label": "Agent 决策",
@@ -159,6 +179,72 @@ def dashboard(request: Request, session: AdminSession):
             "recent_outputs": recent_outputs,
         },
     )
+
+
+@router.get("/agent")
+def agent_console(request: Request, session: AdminSession):
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/agent.html",
+        context={
+            "messages": _agent_messages(session),
+            "jobs": _agent_job_rows(session),
+            "defaults": _agent_form_defaults(),
+        },
+    )
+
+
+@router.get("/agent/messages")
+def agent_messages(background_tasks: BackgroundTasks, session: AdminSession):
+    _schedule_due_crawl_jobs_if_any(background_tasks, session)
+    return {
+        "messages": _agent_messages(session),
+        "jobs": _agent_job_rows(session),
+        "pending_review": _review_count(session),
+    }
+
+
+@router.post("/agent/messages")
+def submit_agent_message(
+    background_tasks: BackgroundTasks,
+    session: AdminSession,
+    objective: str = Form(...),
+    seed_urls: str = Form(""),
+    extractor_mode: str = Form("auto"),
+    max_seed_urls: int = Form(8),
+    discovery_max_links: int = Form(12),
+    discover_links: bool = Form(True),
+    auto_start: bool = Form(True),
+):
+    result = _create_agent_command(
+        session=session,
+        objective=objective,
+        seed_urls=seed_urls,
+        extractor_mode=extractor_mode,
+        max_seed_urls=max_seed_urls,
+        discovery_max_links=discovery_max_links,
+        discover_links=discover_links,
+        auto_start=auto_start,
+        created_by="admin-agent",
+    )
+    session.commit()
+
+    if result.auto_start and result.job is not None:
+        background_tasks.add_task(
+            _run_crawl_job_background,
+            str(result.job.id),
+            result.extractor_mode,
+        )
+
+    return {
+        "ok": True,
+        "command_id": str(result.command.id),
+        "session_id": str(result.orchestration_session.id),
+        "job_id": str(result.job.id) if result.job is not None else None,
+        "messages": _agent_messages(session),
+        "jobs": _agent_job_rows(session),
+        "pending_review": _review_count(session),
+    }
 
 
 @router.get("/command")
@@ -219,152 +305,27 @@ def submit_command(
     discover_links: bool = Form(False),
     auto_start: bool = Form(False),
 ):
-    objective = objective.strip()
-    if not objective:
-        return _redirect("/admin/command")
-
-    max_seed_urls = max(1, min(max_seed_urls, 50))
-    discovery_max_links = max(1, min(discovery_max_links, 50))
-    urls, source_mode = _resolve_crawl_urls(session, objective, seed_urls, max_seed_urls)
-    if not urls:
-        raise HTTPException(status_code=400, detail="No enabled public source URLs found.")
-
-    form_defaults = {
-        "extractor_mode": extractor_mode,
-        "auto_start": auto_start,
-        "discover_links": discover_links,
-        "discovery_max_links": discovery_max_links,
-        "operator_review": True,
-        "budgets": {
-            "max_seed_urls": max_seed_urls,
-            "seed_url_count": len(urls),
-        },
-    }
-    target_scope = {
-        "source_mode": source_mode,
-        "urls": urls,
-        "textbook_scope": _infer_textbook_scope(objective),
-    }
-    budgets = {"max_seed_urls": max_seed_urls, "seed_url_count": len(urls)}
-    stop_conditions = {"manual_stop_allowed": True}
-    strategy_preferences = {
-        "extractor_mode": extractor_mode,
-        "auto_start": auto_start,
-        "discover_links": discover_links,
-        "discovery_max_links": discovery_max_links,
-        "operator_review": True,
-    }
-    fallback_directive = NaturalLanguageDirective(
-        raw_text=objective,
-        interpreted_intent=_interpret_command(objective, urls, extractor_mode),
-        target_scope=target_scope,
-        strategy_preferences=strategy_preferences,
-        budgets=budgets,
-        stop_conditions=stop_conditions,
-        review_policy={"low_confidence": "queue_for_review"},
-    )
-    directive = (
-        NaturalLanguageCommandAgent().interpret(
-            raw_text=objective,
-            form_defaults=form_defaults,
-            available_urls=urls,
-            source_mode=source_mode,
-            active_sources=_active_source_summaries(session),
-        )
-        or fallback_directive
-    )
-    target_scope = {
-        **target_scope,
-        **directive.target_scope,
-        "source_mode": source_mode,
-        "urls": urls,
-    }
-    strategy_preferences = {
-        **strategy_preferences,
-        **directive.strategy_preferences,
-    }
-    budgets = {**budgets, **directive.budgets, "seed_url_count": len(urls)}
-    stop_conditions = {**stop_conditions, **directive.stop_conditions}
-    extractor_mode = str(strategy_preferences.get("extractor_mode") or extractor_mode)
-    discover_links = _as_bool(strategy_preferences.get("discover_links"), discover_links)
-    auto_start = _as_bool(strategy_preferences.get("auto_start"), auto_start)
-    discovery_max_links = _bounded_int(
-        strategy_preferences.get("discovery_max_links"),
-        default=discovery_max_links,
-        minimum=1,
-        maximum=50,
-    )
-    strategy_preferences = {
-        **strategy_preferences,
-        "extractor_mode": extractor_mode,
-        "auto_start": auto_start,
-        "discover_links": discover_links,
-        "discovery_max_links": discovery_max_links,
-        "operator_review": True,
-    }
-    directive = directive.model_copy(
-        update={
-            "target_scope": target_scope,
-            "strategy_preferences": strategy_preferences,
-            "budgets": budgets,
-            "stop_conditions": stop_conditions,
-        }
-    )
-
-    orchestration_session = OrchestrationSession(
-        objective=objective,
-        status=OrchestrationStatus.active,
-        target_scope=target_scope,
-        strategy=strategy_preferences,
-        budgets=budgets,
-        stop_conditions=stop_conditions,
-        created_by="admin",
-    )
-    session.add(orchestration_session)
-    session.flush()
-
-    command = NaturalLanguageCommand(
-        session_id=orchestration_session.id,
-        raw_text=objective,
-        interpreted_intent=directive.interpreted_intent,
-        structured_directive=directive.model_dump(mode="json"),
-        status=OrchestrationStatus.active,
-        created_by="admin",
-    )
-    session.add(command)
-    session.flush()
-
-    context = _build_orchestration_context(
+    result = _create_agent_command(
         session=session,
-        orchestration_session=orchestration_session,
         objective=objective,
-        target_scope=target_scope,
-        budgets=budgets,
-        stop_conditions=stop_conditions,
-    )
-    plan = AIOrchestratorAgent().plan(directive, context)
-    orchestration_session.strategy = {
-        **strategy_preferences,
-        "plan": plan.model_dump(mode="json"),
-    }
-
-    job = _execute_orchestration_plan(
-        session=session,
-        plan=plan,
-        orchestration_session=orchestration_session,
-        command=command,
-        urls=urls,
+        seed_urls=seed_urls,
         extractor_mode=extractor_mode,
-        discover_links=discover_links,
+        max_seed_urls=max_seed_urls,
         discovery_max_links=discovery_max_links,
+        discover_links=discover_links,
         auto_start=auto_start,
+        created_by="admin-command",
     )
     session.commit()
 
-    if auto_start and job is not None:
-        background_tasks.add_task(_run_crawl_job_background, str(job.id), extractor_mode)
-    if job is not None:
-        return _redirect(f"/admin/crawl-jobs/{job.id}")
+    if result.auto_start and result.job is not None:
+        background_tasks.add_task(
+            _run_crawl_job_background,
+            str(result.job.id),
+            result.extractor_mode,
+        )
+    if result.job is not None:
+        return _redirect(f"/admin/crawl-jobs/{result.job.id}")
     return _redirect("/admin/command")
 
 
@@ -510,7 +471,8 @@ def crawl_jobs(request: Request, session: AdminSession):
 
 
 @router.get("/crawl-jobs/status")
-def crawl_jobs_status(session: AdminSession):
+def crawl_jobs_status(background_tasks: BackgroundTasks, session: AdminSession):
+    _schedule_due_crawl_jobs_if_any(background_tasks, session)
     jobs = _job_rows(
         session,
         select(CrawlJob).order_by(CrawlJob.created_at.desc()).limit(100),
@@ -519,7 +481,8 @@ def crawl_jobs_status(session: AdminSession):
 
 
 @router.get("/crawl-jobs/{job_id}/status")
-def crawl_job_status(job_id: str, session: AdminSession):
+def crawl_job_status(job_id: str, background_tasks: BackgroundTasks, session: AdminSession):
+    _schedule_due_crawl_jobs_if_any(background_tasks, session)
     job = _get_job(session, job_id)
     return _crawl_job_detail_context(session, job)
 
@@ -556,6 +519,7 @@ def _crawl_job_detail_context(session: Session, job: CrawlJob) -> dict[str, Any]
             "variants": _result_value(task, "variants"),
             "note": _task_note(task),
             "error": _truncate(task.error, 160),
+            "not_before": _display(task.not_before),
             "updated": _display(task.updated_at),
         }
         for task in tasks
@@ -708,33 +672,15 @@ def review_candidate_action(
     session: AdminSession,
     reason: str = Form(""),
 ):
-    candidate = _get_candidate(session, candidate_id)
-    new_status = _review_status_for_action(action)
-    decisions = session.scalars(
-        select(ReconciliationDecision).where(ReconciliationDecision.candidate_id == candidate.id)
-    ).all()
-    primary_decision = decisions[0] if decisions else None
-    before_payload = _candidate_review_payload(candidate, primary_decision)
-
-    candidate.review_status = new_status
-    for decision in decisions:
-        decision.review_status = new_status
-    if new_status in {ReviewStatus.approved, ReviewStatus.rejected}:
-        _set_related_canonical_review_status(session, candidate, decisions, new_status)
-
-    session.add(
-        ManualEditLog(
-            target_table="candidate_knowledge_items",
-            target_id=candidate.id,
-            action=_manual_action_for_review(action),
-            before_payload=before_payload,
-            after_payload=_candidate_review_payload(candidate, primary_decision),
-            reason=reason.strip() or None,
+    try:
+        ReviewService(session).apply_candidate_action(
+            candidate_id,
+            action,
+            reason=reason,
             editor="admin",
-            related_decision_id=primary_decision.id if primary_decision is not None else None,
-            can_rollback=False,
         )
-    )
+    except ReviewActionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     session.commit()
     return _redirect("/admin/review")
 
@@ -746,22 +692,15 @@ def review_item_action(
     session: AdminSession,
     reason: str = Form(""),
 ):
-    item = _get_review_item(session, item_id)
-    before_payload = _review_item_payload(item)
-    item.status = _review_status_for_action(action)
-    session.add(
-        ManualEditLog(
-            target_table=item.target_table or "review_items",
-            target_id=item.target_id or item.id,
-            action=_manual_action_for_review(action),
-            before_payload=before_payload,
-            after_payload=_review_item_payload(item),
-            reason=reason.strip() or item.reason,
+    try:
+        ReviewService(session).apply_review_item_action(
+            item_id,
+            action,
+            reason=reason,
             editor="admin",
-            related_review_item_id=item.id,
-            can_rollback=False,
         )
-    )
+    except ReviewActionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     session.commit()
     return _redirect("/admin/review")
 
@@ -916,6 +855,28 @@ def _run_crawl_job_background(job_id: str, extractor_mode: str) -> None:
                 session.commit()
 
 
+def _schedule_due_crawl_jobs_if_any(
+    background_tasks: BackgroundTasks,
+    session: Session,
+    limit: int = 3,
+) -> None:
+    if not CrawlJobDispatcher(session).due_jobs(limit=1):
+        return
+    background_tasks.add_task(_run_due_crawl_jobs_background, limit)
+
+
+def _run_due_crawl_jobs_background(limit: int = 3) -> None:
+    if not _due_crawl_jobs_lock.acquire(blocking=False):
+        return
+    try:
+        with SessionLocal() as session:
+            due_jobs = CrawlJobDispatcher(session).due_jobs(limit=limit)
+        for due_job in due_jobs:
+            _run_crawl_job_background(due_job.job_id, due_job.extractor_mode)
+    finally:
+        _due_crawl_jobs_lock.release()
+
+
 def _resolve_crawl_urls(
     session: Session,
     objective: str,
@@ -942,12 +903,33 @@ def _extract_urls(text: str) -> list[str]:
     urls = []
     seen = set()
     for match in URL_RE.findall(text):
-        url = match.rstrip(".,;:!?)]}，。；：！？、")
+        url = _clean_extracted_url(match)
+        if not url:
+            continue
         if url not in seen:
             urls.append(url)
             seen.add(url)
     return urls
 
+
+def _clean_extracted_url(raw_url: str) -> str:
+    url = raw_url.strip().rstrip(URL_TRAILING_CHARS)
+    for marker in URL_ATTACHED_TEXT_MARKERS:
+        marker_index = url.find(marker)
+        if marker_index <= 0:
+            continue
+        candidate = url[:marker_index].rstrip(URL_TRAILING_CHARS)
+        if _looks_like_http_url(candidate):
+            url = candidate
+            break
+    if not _looks_like_http_url(url):
+        return ""
+    return url
+
+
+def _looks_like_http_url(url: str) -> bool:
+    parsed = urlsplit(url)
+    return parsed.scheme.lower() in {"http", "https"} and bool(parsed.netloc)
 
 def _active_source_summaries(session: Session) -> list[dict[str, Any]]:
     return [
@@ -962,6 +944,280 @@ def _active_source_summaries(session: Session) -> list[dict[str, Any]]:
             select(SourceSite).where(SourceSite.enabled.is_(True)).order_by(SourceSite.name)
         ).all()
     ]
+
+
+def _agent_form_defaults() -> dict[str, Any]:
+    return {
+        "objective": (
+            "优先爬取公开官方来源和公开教研资源，围绕初中数学教材章节，"
+            "收集教师解题方法、教学讲法、易错提醒和课堂变体。"
+        ),
+        "extractor_mode": "auto",
+        "max_seed_urls": 8,
+        "discovery_max_links": 12,
+        "discover_links": True,
+        "auto_start": True,
+    }
+
+
+def _agent_messages(session: Session, limit: int = 80) -> list[dict[str, Any]]:
+    messages: list[dict[str, Any]] = []
+    commands = session.scalars(
+        select(NaturalLanguageCommand)
+        .order_by(NaturalLanguageCommand.created_at.desc())
+        .limit(30)
+    ).all()
+    for command in commands:
+        messages.append(
+            {
+                "kind": "user",
+                "title": "用户",
+                "body": command.raw_text,
+                "meta": _display(command.created_at),
+                "created_at": command.created_at,
+                "href": None,
+            }
+        )
+        if command.interpreted_intent or command.error:
+            messages.append(
+                {
+                    "kind": "agent",
+                    "title": "CommandAgent",
+                    "body": command.error or command.interpreted_intent,
+                    "meta": _display(command.status),
+                    "created_at": command.created_at,
+                    "href": None,
+                }
+            )
+
+    decisions = session.scalars(
+        select(AgentDecision).order_by(AgentDecision.created_at.desc()).limit(80)
+    ).all()
+    for decision in decisions:
+        message_kind = (
+            "agent" if decision.decision_type != AgentDecisionType.create_task else "tool"
+        )
+        messages.append(
+            {
+                "kind": message_kind,
+                "title": _display(decision.decision_type),
+                "body": decision.rationale,
+                "meta": (
+                    f"{_display(decision.target_type)} · "
+                    f"{'自动执行' if decision.auto_executed else '待人工'} · "
+                    f"{decision.confidence:.2f}"
+                ),
+                "created_at": decision.created_at,
+                "href": _decision_target_href(decision),
+            }
+        )
+
+    jobs = session.scalars(
+        select(CrawlJob).order_by(CrawlJob.created_at.desc()).limit(30)
+    ).all()
+    for job in jobs:
+        row = _job_row(session, job)
+        messages.append(
+            {
+                "kind": "tool",
+                "title": "爬取任务",
+                "body": job.name,
+                "meta": (
+                    f"{row['status']} · 完成 {row['succeeded']}/{row['total']} · "
+                    f"失败 {row['failed']} · 阻塞 {row['blocked']}"
+                ),
+                "created_at": job.created_at,
+                "href": f"/admin/crawl-jobs/{job.id}",
+            }
+        )
+
+    messages.sort(key=lambda item: item["created_at"])
+    return [
+        {
+            "kind": str(message["kind"]),
+            "title": str(message["title"]),
+            "body": str(message["body"] or "-"),
+            "meta": str(message["meta"] or "-"),
+            "href": message["href"],
+        }
+        for message in messages[-limit:]
+    ]
+
+
+def _agent_job_rows(session: Session) -> list[dict[str, Any]]:
+    return _job_rows(
+        session,
+        select(CrawlJob).order_by(CrawlJob.created_at.desc()).limit(8),
+    )
+
+
+def _decision_target_href(decision: AgentDecision) -> str | None:
+    if decision.target_type == "crawl_job" and decision.target_id is not None:
+        return f"/admin/crawl-jobs/{decision.target_id}"
+    if decision.target_type == "crawl_task":
+        return None
+    return None
+
+
+def _create_agent_command(
+    *,
+    session: Session,
+    objective: str,
+    seed_urls: str,
+    extractor_mode: str,
+    max_seed_urls: int,
+    discovery_max_links: int,
+    discover_links: bool,
+    auto_start: bool,
+    created_by: str,
+) -> AgentCommandResult:
+    objective = objective.strip()
+    if not objective:
+        raise HTTPException(status_code=400, detail="请输入目标。")
+
+    max_seed_urls = max(1, min(max_seed_urls, 50))
+    discovery_max_links = max(1, min(discovery_max_links, 50))
+    urls, source_mode = _resolve_crawl_urls(session, objective, seed_urls, max_seed_urls)
+    if not urls:
+        raise HTTPException(status_code=400, detail="No enabled public source URLs found.")
+
+    form_defaults = {
+        "extractor_mode": extractor_mode,
+        "auto_start": auto_start,
+        "discover_links": discover_links,
+        "discovery_max_links": discovery_max_links,
+        "operator_review": True,
+        "budgets": {
+            "max_seed_urls": max_seed_urls,
+            "seed_url_count": len(urls),
+        },
+    }
+    target_scope = {
+        "source_mode": source_mode,
+        "urls": urls,
+        "textbook_scope": _infer_textbook_scope(objective),
+    }
+    budgets = {"max_seed_urls": max_seed_urls, "seed_url_count": len(urls)}
+    stop_conditions = {"manual_stop_allowed": True}
+    strategy_preferences = {
+        "extractor_mode": extractor_mode,
+        "auto_start": auto_start,
+        "discover_links": discover_links,
+        "discovery_max_links": discovery_max_links,
+        "operator_review": True,
+    }
+    fallback_directive = NaturalLanguageDirective(
+        raw_text=objective,
+        interpreted_intent=_interpret_command(objective, urls, extractor_mode),
+        target_scope=target_scope,
+        strategy_preferences=strategy_preferences,
+        budgets=budgets,
+        stop_conditions=stop_conditions,
+        review_policy={"low_confidence": "queue_for_review"},
+    )
+    directive = (
+        NaturalLanguageCommandAgent().interpret(
+            raw_text=objective,
+            form_defaults=form_defaults,
+            available_urls=urls,
+            source_mode=source_mode,
+            active_sources=_active_source_summaries(session),
+        )
+        or fallback_directive
+    )
+    target_scope = {
+        **target_scope,
+        **directive.target_scope,
+        "source_mode": source_mode,
+        "urls": urls,
+    }
+    strategy_preferences = {
+        **strategy_preferences,
+        **directive.strategy_preferences,
+    }
+    budgets = {**budgets, **directive.budgets, "seed_url_count": len(urls)}
+    stop_conditions = {**stop_conditions, **directive.stop_conditions}
+    extractor_mode = str(strategy_preferences.get("extractor_mode") or extractor_mode)
+    discover_links = _as_bool(strategy_preferences.get("discover_links"), discover_links)
+    auto_start = _as_bool(strategy_preferences.get("auto_start"), auto_start)
+    discovery_max_links = _bounded_int(
+        strategy_preferences.get("discovery_max_links"),
+        default=discovery_max_links,
+        minimum=1,
+        maximum=50,
+    )
+    strategy_preferences = {
+        **strategy_preferences,
+        "extractor_mode": extractor_mode,
+        "auto_start": auto_start,
+        "discover_links": discover_links,
+        "discovery_max_links": discovery_max_links,
+        "operator_review": True,
+    }
+    directive = directive.model_copy(
+        update={
+            "target_scope": target_scope,
+            "strategy_preferences": strategy_preferences,
+            "budgets": budgets,
+            "stop_conditions": stop_conditions,
+        }
+    )
+
+    orchestration_session = OrchestrationSession(
+        objective=objective,
+        status=OrchestrationStatus.active,
+        target_scope=target_scope,
+        strategy=strategy_preferences,
+        budgets=budgets,
+        stop_conditions=stop_conditions,
+        created_by=created_by,
+    )
+    session.add(orchestration_session)
+    session.flush()
+
+    command = NaturalLanguageCommand(
+        session_id=orchestration_session.id,
+        raw_text=objective,
+        interpreted_intent=directive.interpreted_intent,
+        structured_directive=directive.model_dump(mode="json"),
+        status=OrchestrationStatus.active,
+        created_by=created_by,
+    )
+    session.add(command)
+    session.flush()
+
+    context = _build_orchestration_context(
+        session=session,
+        orchestration_session=orchestration_session,
+        objective=objective,
+        target_scope=target_scope,
+        budgets=budgets,
+        stop_conditions=stop_conditions,
+    )
+    plan = AIOrchestratorAgent().plan(directive, context)
+    orchestration_session.strategy = {
+        **strategy_preferences,
+        "plan": plan.model_dump(mode="json"),
+    }
+
+    job = _execute_orchestration_plan(
+        session=session,
+        plan=plan,
+        orchestration_session=orchestration_session,
+        command=command,
+        urls=urls,
+        extractor_mode=extractor_mode,
+        discover_links=discover_links,
+        discovery_max_links=discovery_max_links,
+        auto_start=auto_start,
+    )
+    return AgentCommandResult(
+        orchestration_session=orchestration_session,
+        command=command,
+        job=job,
+        extractor_mode=extractor_mode,
+        auto_start=auto_start,
+    )
 
 
 def _build_orchestration_context(
@@ -1200,6 +1456,9 @@ def _result_value(task: CrawlTask, key: str) -> Any:
     result = task.result_json or {}
     if key in result:
         return result.get(key, "-")
+    metrics = result.get("metrics")
+    if isinstance(metrics, dict) and key in metrics:
+        return metrics.get(key, "-")
     payload = result.get("payload")
     if isinstance(payload, dict):
         return payload.get(key, "-")
@@ -1230,112 +1489,6 @@ def _as_int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
-
-
-def _get_candidate(session: Session, candidate_id: str) -> CandidateKnowledgeItem:
-    try:
-        parsed_id = uuid.UUID(candidate_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail="找不到候选项。") from exc
-    candidate = session.get(CandidateKnowledgeItem, parsed_id)
-    if candidate is None:
-        raise HTTPException(status_code=404, detail="找不到候选项。")
-    return candidate
-
-
-def _get_review_item(session: Session, item_id: str) -> ReviewItem:
-    try:
-        parsed_id = uuid.UUID(item_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail="找不到复核项。") from exc
-    item = session.get(ReviewItem, parsed_id)
-    if item is None:
-        raise HTTPException(status_code=404, detail="找不到复核项。")
-    return item
-
-
-def _review_status_for_action(action: str) -> ReviewStatus:
-    if action == "approve":
-        return ReviewStatus.approved
-    if action == "reject":
-        return ReviewStatus.rejected
-    if action == "needs-edit":
-        return ReviewStatus.needs_edit
-    raise HTTPException(status_code=400, detail="未知复核操作。")
-
-
-def _manual_action_for_review(action: str) -> ManualEditAction:
-    if action == "approve":
-        return ManualEditAction.approve_ai_change
-    if action == "reject":
-        return ManualEditAction.reject_ai_change
-    if action == "needs-edit":
-        return ManualEditAction.update
-    raise HTTPException(status_code=400, detail="未知复核操作。")
-
-
-def _candidate_review_payload(
-    candidate: CandidateKnowledgeItem,
-    decision: ReconciliationDecision | None,
-) -> dict[str, Any]:
-    return {
-        "candidate_id": str(candidate.id),
-        "title": candidate.title,
-        "review_status": candidate.review_status.value,
-        "document_id": str(candidate.document_id),
-        "confidence": candidate.confidence,
-        "decision_id": str(decision.id) if decision is not None else None,
-        "decision_status": decision.review_status.value if decision is not None else None,
-    }
-
-
-def _review_item_payload(item: ReviewItem) -> dict[str, Any]:
-    return {
-        "review_item_id": str(item.id),
-        "item_type": item.item_type,
-        "target_table": item.target_table,
-        "target_id": str(item.target_id) if item.target_id is not None else None,
-        "review_status": item.status.value,
-        "reason": item.reason,
-    }
-
-
-def _set_related_canonical_review_status(
-    session: Session,
-    candidate: CandidateKnowledgeItem,
-    decisions: list[ReconciliationDecision],
-    status: ReviewStatus,
-) -> None:
-    evidence_ids = _candidate_evidence_ids(candidate)
-    for decision in decisions:
-        if decision.matched_table != "teaching_methods" or decision.matched_id is None:
-            continue
-        method = session.get(TeachingMethod, decision.matched_id)
-        if method is None:
-            continue
-        if status == ReviewStatus.approved and method.review_status == ReviewStatus.pending:
-            method.review_status = status
-        elif status == ReviewStatus.rejected and method.evidence_id in evidence_ids:
-            method.review_status = status
-
-    variants = session.scalars(
-        select(TeachingMethodVariant).where(
-            TeachingMethodVariant.source_document_id == candidate.document_id
-        )
-    ).all()
-    for variant in variants:
-        if variant.evidence_id in evidence_ids or variant.title == candidate.title:
-            variant.review_status = status
-
-
-def _candidate_evidence_ids(candidate: CandidateKnowledgeItem) -> set[uuid.UUID]:
-    evidence_ids: set[uuid.UUID] = set()
-    for raw_id in candidate.evidence_ids or []:
-        try:
-            evidence_ids.add(uuid.UUID(str(raw_id)))
-        except ValueError:
-            continue
-    return evidence_ids
 
 
 def _get_job(session: Session, job_id: str) -> CrawlJob:

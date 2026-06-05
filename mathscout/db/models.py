@@ -383,6 +383,7 @@ class CrawlTask(Base):
     retries: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text)
     result_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    not_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 

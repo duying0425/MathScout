@@ -1,0 +1,18 @@
+{% set current_path = request.url.path if request is defined else "" %}
+{% set heading = page_title|default(title|default("后台")) %}
+<header class="admin-header">
+  <a class="admin-brand" href="/admin">MathScout</a>
+  <h1 class="admin-page-title">{{ heading }}</h1>
+  <nav class="admin-nav" aria-label="后台导航">
+    <a class="{{ 'active' if current_path == '/admin' or current_path == '/admin/' else '' }}" href="/admin">控制台</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/agent') else '' }}" href="/admin/agent">Agent</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/crawl-jobs') else '' }}" href="/admin/crawl-jobs">任务</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/review') else '' }}" href="/admin/review">复核</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/documents') else '' }}" href="/admin/documents">文档</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/techniques') else '' }}" href="/admin/techniques">方法库</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/knowledge') else '' }}" href="/admin/knowledge">知识</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/sources') else '' }}" href="/admin/sources">来源</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/decisions') else '' }}" href="/admin/decisions">决策</a>
+    <a class="{{ 'active' if current_path.startswith('/admin/changes') else '' }}" href="/admin/changes">变更</a>
+  </nav>
+</header>

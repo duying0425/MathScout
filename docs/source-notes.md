@@ -1,6 +1,10 @@
 # Initial Source Notes
 
+Last updated: 2026-06-05.
+
 Checked on 2026-06-04.
+
+Implementation roadmap: [Development Roadmap](development-roadmap.md).
 
 ## Official Baseline Sources
 
@@ -24,3 +28,26 @@ Checked on 2026-06-04.
   notices where possible, not from unsourced "教材版本地区表" posts.
 - Public teaching resources can seed extraction, but canonical records should
   retain source provenance and review status.
+
+## Current Source Strategy
+
+- Official and public education sources remain the preferred seed set.
+- The Agent Console can accept direct URLs in the user goal; manual URLs take
+  priority over enabled default source sites.
+- `SourceDiscoveryAgent` should select child links from fetched page candidates;
+  it must not invent URLs.
+- Public pages with normal login navigation should not be treated as blocked
+  login pages. Protected-page prompts, access restrictions, and HTTP failures
+  should stop before extraction and create structured observations.
+- Login-gated sources require review and later user-provided cookie profiles.
+  MathScout must not bypass captchas, paywalls, or access controls.
+- Commercial or full-text copyrighted resources should be reviewed before their
+  extracted summaries affect canonical records.
+
+## Source Work Still Needed
+
+- Add source detail pages with domain policy, crawl delay, robots status, and
+  recent yield.
+- Add source quality metrics from `quality_check` tasks.
+- Add blocked-login/cookie-profile management for authorized domains.
+- Add periodic source review so low-yield sources can be paused or reprioritized.

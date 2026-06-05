@@ -1,5 +1,7 @@
 # MathScout
 
+Last updated: 2026-06-05.
+
 MathScout is an AI-managed knowledge-base app for junior high school math. Its
 main value is collecting diverse problem-solving techniques from teachers,
 preserving useful variants, and mapping them to the right textbook chapters,
@@ -45,7 +47,8 @@ The first dataset shape is based on `.template/beishida_math_json_v3_with_templa
 
 - Backend API and admin: FastAPI, Jinja templates, HTMX-ready server-rendered pages.
 - Database: SQLite for local runs; PostgreSQL, SQLAlchemy, Alembic, optional pgvector for scale.
-- Queue: Redis plus Celery workers.
+- Runtime queue: DB-backed `crawl_jobs` and `crawl_tasks` first; add an
+  independent worker process after step-level task contracts stabilize.
 - Crawling: httpx for static pages, Playwright for JavaScript and login sessions.
 - Parsing: trafilatura and BeautifulSoup for HTML, PyMuPDF for PDF.
 - Extraction: schema-constrained LLM extraction plus deterministic validators.
@@ -97,21 +100,23 @@ docker compose up -d postgres redis
 
 Then switch `.env` to the value in `.env.postgres.example`.
 
-Worker:
-
-```powershell
-celery -A mathscout.worker.celery_app worker -l info
-```
-
 Admin UI:
 
 ```text
-http://127.0.0.1:8000/admin
+http://127.0.0.1:8000/admin/agent
 ```
 
-The admin UI is database-backed. After `init-db`, `import-template`, and
-`seed-sources`, the dashboard shows real counts and the knowledge page can browse
-the imported textbook structure.
+The Web Agent Console is the primary product-facing surface. It accepts a single
+natural-language goal input, including inline URLs such as:
+
+```text
+请帮我抓取http://www.example.com/test下的数据
+```
+
+This is parsed as `http://www.example.com/test`. The admin UI is
+database-backed. After `init-db`, `import-template`, and `seed-sources`, the
+dashboard shows real counts and the knowledge page can browse the imported
+textbook structure.
 
 ## First Crawl Flow
 
@@ -135,6 +140,11 @@ mathscout job-status "<job_id>"
 that status between URLs, so completed pages stay persisted and remaining tasks
 wait in `pending`. Running `run-job` again resumes a paused job.
 
+The DB-backed job runtime enforces URL/source policy, robots, crawl delay through
+`crawl_tasks.not_before`, after-fetch checks, normalized observations, and review
+item creation. Web status polling can trigger due pending jobs to resume; an
+always-on worker is still future work.
+
 For quick local testing without Docker/PostgreSQL:
 
 ```powershell
@@ -153,6 +163,8 @@ The first crawler version writes:
 
 See [docs/first-version-pipeline.md](docs/first-version-pipeline.md) for current limits.
 See [docs/development-status.md](docs/development-status.md) for handoff status and next steps.
+See [docs/development-roadmap.md](docs/development-roadmap.md) for the detailed
+development direction.
 
 ## First Milestone
 

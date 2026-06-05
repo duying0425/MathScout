@@ -16,6 +16,8 @@
         margin: 0;
       }
 
+{% include "admin/_shared_styles.html" %}
+
       header {
         align-items: center;
         background: #ffffff;
@@ -58,10 +60,7 @@
     </style>
   </head>
   <body>
-    <header>
-      <a href="/admin">后台首页</a>
-      <h1>{{ title }}</h1>
-    </header>
+    {% include "admin/_header.html" %}
     <main>
       <section class="panel">
         <ul>
