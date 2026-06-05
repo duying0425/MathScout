@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from mathscout.agents.control_plane import NaturalLanguageCommandAgent
 from mathscout.agents.orchestrator import AIOrchestratorAgent
 from mathscout.db.models import (
     AccessLevel,
@@ -223,6 +224,17 @@ def submit_command(
     if not urls:
         raise HTTPException(status_code=400, detail="No enabled public source URLs found.")
 
+    form_defaults = {
+        "extractor_mode": extractor_mode,
+        "auto_start": auto_start,
+        "discover_links": discover_links,
+        "discovery_max_links": discovery_max_links,
+        "operator_review": True,
+        "budgets": {
+            "max_seed_urls": max_seed_urls,
+            "seed_url_count": len(urls),
+        },
+    }
     target_scope = {
         "source_mode": source_mode,
         "urls": urls,
@@ -237,6 +249,62 @@ def submit_command(
         "discovery_max_links": discovery_max_links,
         "operator_review": True,
     }
+    fallback_directive = NaturalLanguageDirective(
+        raw_text=objective,
+        interpreted_intent=_interpret_command(objective, urls, extractor_mode),
+        target_scope=target_scope,
+        strategy_preferences=strategy_preferences,
+        budgets=budgets,
+        stop_conditions=stop_conditions,
+        review_policy={"low_confidence": "queue_for_review"},
+    )
+    directive = (
+        NaturalLanguageCommandAgent().interpret(
+            raw_text=objective,
+            form_defaults=form_defaults,
+            available_urls=urls,
+            source_mode=source_mode,
+            active_sources=_active_source_summaries(session),
+        )
+        or fallback_directive
+    )
+    target_scope = {
+        **target_scope,
+        **directive.target_scope,
+        "source_mode": source_mode,
+        "urls": urls,
+    }
+    strategy_preferences = {
+        **strategy_preferences,
+        **directive.strategy_preferences,
+    }
+    budgets = {**budgets, **directive.budgets, "seed_url_count": len(urls)}
+    stop_conditions = {**stop_conditions, **directive.stop_conditions}
+    extractor_mode = str(strategy_preferences.get("extractor_mode") or extractor_mode)
+    discover_links = _as_bool(strategy_preferences.get("discover_links"), discover_links)
+    auto_start = _as_bool(strategy_preferences.get("auto_start"), auto_start)
+    discovery_max_links = _bounded_int(
+        strategy_preferences.get("discovery_max_links"),
+        default=discovery_max_links,
+        minimum=1,
+        maximum=50,
+    )
+    strategy_preferences = {
+        **strategy_preferences,
+        "extractor_mode": extractor_mode,
+        "auto_start": auto_start,
+        "discover_links": discover_links,
+        "discovery_max_links": discovery_max_links,
+        "operator_review": True,
+    }
+    directive = directive.model_copy(
+        update={
+            "target_scope": target_scope,
+            "strategy_preferences": strategy_preferences,
+            "budgets": budgets,
+            "stop_conditions": stop_conditions,
+        }
+    )
 
     orchestration_session = OrchestrationSession(
         objective=objective,
@@ -250,15 +318,6 @@ def submit_command(
     session.add(orchestration_session)
     session.flush()
 
-    directive = NaturalLanguageDirective(
-        raw_text=objective,
-        interpreted_intent=_interpret_command(objective, urls, extractor_mode),
-        target_scope=target_scope,
-        strategy_preferences=strategy_preferences,
-        budgets=budgets,
-        stop_conditions=stop_conditions,
-        review_policy={"low_confidence": "queue_for_review"},
-    )
     command = NaturalLanguageCommand(
         session_id=orchestration_session.id,
         raw_text=objective,
@@ -798,15 +857,8 @@ def _extract_urls(text: str) -> list[str]:
     return urls
 
 
-def _build_orchestration_context(
-    session: Session,
-    orchestration_session: OrchestrationSession,
-    objective: str,
-    target_scope: dict[str, Any],
-    budgets: dict[str, Any],
-    stop_conditions: dict[str, Any],
-) -> OrchestrationContext:
-    active_sources = [
+def _active_source_summaries(session: Session) -> list[dict[str, Any]]:
+    return [
         {
             "id": str(site.id),
             "name": site.name,
@@ -818,6 +870,17 @@ def _build_orchestration_context(
             select(SourceSite).where(SourceSite.enabled.is_(True)).order_by(SourceSite.name)
         ).all()
     ]
+
+
+def _build_orchestration_context(
+    session: Session,
+    orchestration_session: OrchestrationSession,
+    objective: str,
+    target_scope: dict[str, Any],
+    budgets: dict[str, Any],
+    stop_conditions: dict[str, Any],
+) -> OrchestrationContext:
+    active_sources = _active_source_summaries(session)
     blocked_sources = [
         source
         for source in active_sources
@@ -881,6 +944,28 @@ def _infer_textbook_scope(objective: str) -> dict[str, str]:
     if focus:
         scope["focus"] = ", ".join(focus)
     return scope
+
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "on", "是"}:
+            return True
+        if lowered in {"0", "false", "no", "off", "否"}:
+            return False
+    return bool(value)
+
+
+def _bounded_int(value: Any, *, default: int, minimum: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(parsed, maximum))
 
 
 def _interpret_command(objective: str, urls: list[str], extractor_mode: str) -> str:

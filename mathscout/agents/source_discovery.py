@@ -8,6 +8,12 @@ from urllib.parse import urldefrag, urljoin, urlparse
 from bs4 import BeautifulSoup
 
 from mathscout.agents.base import AgentResult, AgentStatus
+from mathscout.agents.control_plane import (
+    ChatJsonClient,
+    SourceCandidate,
+    SourceSelectionAgent,
+)
+from mathscout.config import Settings
 from mathscout.crawler.fetchers import HttpFetcher
 
 POSITIVE_KEYWORDS = {
@@ -241,11 +247,17 @@ class PolicyGuardAgent:
 
 
 class SourceDiscoveryAgent:
-    """从种子页发现候选链接，并按教学资源价值排序。"""
+    """从种子页发现候选链接，并交给 AI 选择下一批抓取目标。"""
 
-    def __init__(self, policy_guard: PolicyGuardAgent | None = None) -> None:
+    def __init__(
+        self,
+        policy_guard: PolicyGuardAgent | None = None,
+        client: ChatJsonClient | None = None,
+        settings: Settings | None = None,
+    ) -> None:
         self.fetcher = HttpFetcher()
         self.policy_guard = policy_guard or PolicyGuardAgent()
+        self.selection_agent = SourceSelectionAgent(client=client, settings=settings)
 
     def run(
         self,
@@ -304,7 +316,7 @@ class SourceDiscoveryAgent:
     ) -> list[DiscoveredLink]:
         soup = BeautifulSoup(html, "html.parser")
         seen: set[str] = set()
-        links: list[DiscoveredLink] = []
+        candidates: list[tuple[SourceCandidate, PolicyDecision]] = []
         for anchor in soup.find_all("a"):
             href = anchor.get("href")
             if not href:
@@ -322,21 +334,93 @@ class SourceDiscoveryAgent:
             if not policy.allowed:
                 continue
             score, reasons = score_link(url=url, label=label, objective=objective)
-            if score <= 0:
+            candidates.append(
+                (
+                    SourceCandidate(
+                        url=url,
+                        label=label or url,
+                        prior_score=score,
+                        prior_reasons=reasons,
+                        policy={
+                            "allowed": policy.allowed,
+                            "reason": policy.reason,
+                            "checks": policy.checks,
+                        },
+                    ),
+                    policy,
+                )
+            )
+
+        ai_links = self._select_with_ai(
+            objective=objective,
+            seed_url=seed_url,
+            max_links=max_links,
+            candidates=candidates,
+        )
+        if ai_links is not None:
+            return ai_links
+
+        links = [
+            _candidate_to_link(candidate, policy, source_url=seed_url)
+            for candidate, policy in candidates
+            if candidate.prior_score > 0
+        ]
+        links.sort(key=lambda link: (-link.score, len(link.url), link.url))
+        return links[:max_links]
+
+    def _select_with_ai(
+        self,
+        *,
+        objective: str,
+        seed_url: str,
+        max_links: int,
+        candidates: list[tuple[SourceCandidate, PolicyDecision]],
+    ) -> list[DiscoveredLink] | None:
+        if not candidates:
+            return []
+        ranked_candidates = sorted(
+            candidates,
+            key=lambda item: (-item[0].prior_score, len(item[0].url), item[0].url),
+        )[:80]
+        selection = self.selection_agent.select_links(
+            objective=objective,
+            seed_url=seed_url,
+            candidates=[candidate for candidate, _policy in ranked_candidates],
+            max_links=max_links,
+        )
+        if selection is None:
+            return None
+
+        by_url = {candidate.url: (candidate, policy) for candidate, policy in ranked_candidates}
+        links: list[DiscoveredLink] = []
+        seen: set[str] = set()
+        for selected in selection.selected_links:
+            if selected.url in seen:
                 continue
+            candidate_and_policy = by_url.get(selected.url)
+            if candidate_and_policy is None:
+                continue
+            candidate, policy = candidate_and_policy
+            if not policy.allowed:
+                continue
+            reasons = [f"ai:{reason}" for reason in selected.reasons]
+            if not reasons:
+                reasons = ["ai:selected"]
+            reasons.extend(f"prior:{reason}" for reason in candidate.prior_reasons[:4])
             links.append(
                 DiscoveredLink(
-                    url=url,
-                    label=label or url,
-                    score=score,
+                    url=candidate.url,
+                    label=selected.label or candidate.label,
+                    score=selected.score,
                     reasons=reasons,
                     source_url=seed_url,
                     policy=policy,
                 )
             )
-
-        links.sort(key=lambda link: (-link.score, len(link.url), link.url))
-        return links[:max_links]
+            seen.add(selected.url)
+            if len(links) >= max_links:
+                break
+        return links
 
 
 def score_link(url: str, label: str, objective: str) -> tuple[float, list[str]]:
@@ -418,6 +502,22 @@ def _contains_keyword(original_text: str, lowered_text: str, keywords: set[str])
         if keyword.lower() in haystack:
             return True
     return False
+
+
+def _candidate_to_link(
+    candidate: SourceCandidate,
+    policy: PolicyDecision,
+    *,
+    source_url: str,
+) -> DiscoveredLink:
+    return DiscoveredLink(
+        url=candidate.url,
+        label=candidate.label,
+        score=candidate.prior_score,
+        reasons=candidate.prior_reasons,
+        source_url=source_url,
+        policy=policy,
+    )
 
 
 def _is_generic_directory_label(label: str) -> bool:

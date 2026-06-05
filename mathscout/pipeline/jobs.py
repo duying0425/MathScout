@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from mathscout.agents.base import AgentStatus
+from mathscout.agents.control_plane import ExecutionMonitorAgent
 from mathscout.agents.source_discovery import SourceDiscoveryAgent
 from mathscout.db.models import (
     AgentDecision,
@@ -15,6 +16,8 @@ from mathscout.db.models import (
     CrawlJob,
     CrawlStatus,
     CrawlTask,
+    ReviewItem,
+    ReviewStatus,
 )
 from mathscout.pipeline.crawl import CrawlPipeline
 
@@ -82,7 +85,13 @@ class CrawlJobRunner:
             job = self.session.get(CrawlJob, parsed_job_id)
             if job is None:
                 raise ValueError(f"运行过程中找不到爬取任务: {job_id}")
-            if job.status in {CrawlStatus.paused, CrawlStatus.cancelled}:
+            if job.status in {
+                CrawlStatus.paused,
+                CrawlStatus.cancelled,
+                CrawlStatus.succeeded,
+                CrawlStatus.failed,
+                CrawlStatus.blocked,
+            }:
                 return {"job_id": job_id, "status": job.status.value, "processed": processed}
 
             task = self.session.scalar(
@@ -128,10 +137,11 @@ class CrawlJobRunner:
                         CrawlStatus.blocked
                         if result.get("status") == "blocked_login"
                         else CrawlStatus.succeeded
-                    )
+                )
                 task.result_json = result
                 task.error = None
                 processed += 1
+                self._apply_execution_monitor_decision(job, task, result)
             except Exception as exc:
                 self.session.rollback()
                 task = self.session.get(CrawlTask, task_id)
@@ -294,6 +304,100 @@ class CrawlJobRunner:
                 )
             )
 
+    def _apply_execution_monitor_decision(
+        self,
+        job: CrawlJob,
+        task: CrawlTask,
+        result: dict[str, object],
+    ) -> None:
+        source_filter = job.source_filter or {}
+        decision = ExecutionMonitorAgent().evaluate_task(
+            objective=str(source_filter.get("objective") or job.name),
+            job={
+                "id": str(job.id),
+                "name": job.name,
+                "status": job.status.value,
+                "source_filter": source_filter,
+            },
+            task={
+                "id": str(task.id),
+                "url": task.url,
+                "task_type": task.task_type,
+                "status": task.status.value,
+                "retries": task.retries,
+            },
+            result=result,
+            task_counts=self._task_counts_for_agent(job.id),
+        )
+        if decision is None:
+            return
+
+        auto_executed = decision.action in {
+            "continue",
+            "pause_job",
+            "stop_job",
+            "adjust_strategy",
+        }
+        target_type = "crawl_task" if decision.action == "request_review" else "crawl_job"
+        target_id = task.id if decision.action == "request_review" else job.id
+        self.session.add(
+            AgentDecision(
+                session_id=_source_filter_uuid(job, "session_id"),
+                command_id=_source_filter_uuid(job, "command_id"),
+                decision_type=_monitor_decision_type(decision.action),
+                target_type=target_type,
+                target_id=target_id,
+                rationale=decision.rationale,
+                input_metrics={
+                    "task_id": str(task.id),
+                    "task_url": task.url,
+                    "task_result": result,
+                    "task_counts": self._task_counts_for_agent(job.id),
+                },
+                policy_checks={
+                    "allowed_monitor_actions": [
+                        "continue",
+                        "pause_job",
+                        "stop_job",
+                        "request_review",
+                        "adjust_strategy",
+                    ],
+                    "no_destructive_database_action": True,
+                },
+                action_payload={
+                    "action": decision.action,
+                    "strategy_patch": decision.strategy_patch,
+                    "review_reason": decision.review_reason,
+                },
+                confidence=decision.confidence,
+                auto_executed=auto_executed,
+            )
+        )
+
+        if decision.action == "pause_job":
+            job.status = CrawlStatus.paused
+        elif decision.action == "stop_job":
+            job.status = CrawlStatus.succeeded
+            job.finished_at = datetime.utcnow()
+        elif decision.action == "adjust_strategy" and decision.strategy_patch:
+            job.source_filter = {**source_filter, **decision.strategy_patch}
+        elif decision.action == "request_review":
+            self.session.add(
+                ReviewItem(
+                    item_type="ai_execution_monitor",
+                    target_table="crawl_tasks",
+                    target_id=task.id,
+                    status=ReviewStatus.pending,
+                    reason=decision.review_reason or decision.rationale,
+                    payload={
+                        "job_id": str(job.id),
+                        "task_id": str(task.id),
+                        "url": task.url,
+                        "result": result,
+                    },
+                )
+            )
+
     def _terminal_status(self, job_id: uuid.UUID) -> CrawlStatus:
         counts = dict(
             self.session.execute(
@@ -309,6 +413,16 @@ class CrawlJobRunner:
         if counts.get(CrawlStatus.cancelled, 0):
             return CrawlStatus.cancelled
         return CrawlStatus.succeeded
+
+    def _task_counts_for_agent(self, job_id: uuid.UUID) -> dict[str, int]:
+        return {
+            status.value: count
+            for status, count in self.session.execute(
+                select(CrawlTask.status, func.count(CrawlTask.id))
+                .where(CrawlTask.job_id == job_id)
+                .group_by(CrawlTask.status)
+            ).all()
+        }
 
 
 def _source_filter_uuid(job: CrawlJob, key: str) -> uuid.UUID | None:
@@ -361,3 +475,15 @@ def _discovery_decision_rationale(fallback_used: bool) -> str:
         "SourceDiscoveryAgent 选择该链接，因为它匹配用户目标，"
         "并呈现出教学资源或教师方法相关信号。"
     )
+
+
+def _monitor_decision_type(action: str) -> AgentDecisionType:
+    if action == "pause_job":
+        return AgentDecisionType.pause_source
+    if action == "stop_job":
+        return AgentDecisionType.stop_session
+    if action == "request_review":
+        return AgentDecisionType.request_review
+    if action == "adjust_strategy":
+        return AgentDecisionType.adjust_strategy
+    return AgentDecisionType.adjust_strategy

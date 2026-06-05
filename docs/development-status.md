@@ -1,6 +1,6 @@
 # Development Status
 
-Last updated: 2026-06-04.
+Last updated: 2026-06-05.
 
 ## Current Working State
 
@@ -23,22 +23,27 @@ Implemented:
 - HTML/PDF parsing
 - source document and evidence storage
 - AI or rule-based method candidate extraction
+- LLM-first multi-agent control plane for command interpretation, orchestration planning,
+  source selection, execution monitoring, and reconciliation
+- admin AI command flow that lets the NaturalLanguageCommandAgent interpret goals before
+  creating orchestration sessions and crawl jobs
+- seed-page link discovery with AI source selection and deterministic policy guardrails
+- execution monitoring decisions that can continue, pause, stop, request review, or patch strategy
 - canonical teaching method creation
 - teacher/source method variant creation
 - basic method-to-knowledge-point and method-to-section inference
-- reconciliation decision audit records
+- AI-first reconciliation decision audit records with threshold fallback
 
 Not implemented yet:
 
 - real admin edit forms
 - admin detail pages and filtering/search
-- full LLM reconciliation beyond extraction
-- crawling link discovery from seed pages
 - robots/rate-limit enforcement inside job runner
 - Playwright login-cookie flow
 - Postgres migrations with Alembic
 - vector search / pgvector
 - concurrent worker orchestration
+- durable multi-step agent state beyond DB tasks and audit logs
 
 ## Local Run
 
@@ -102,8 +107,11 @@ Run:
 mathscout crawl-url "https://example.com/public-math-teaching-page" --extractor auto
 ```
 
-If `AI_PROVIDER=rule`, or if `auto` has no API key, the crawler uses the local
-rule-based extractor.
+If `AI_PROVIDER=rule`, or if no API key is configured, the control plane and
+extractor use local deterministic fallbacks. With DeepSeek/OpenAI-compatible
+configuration, command interpretation, orchestration planning, source selection,
+execution monitoring, reconciliation, and extraction use schema-constrained LLM
+agents where wired.
 
 ## Persistent Jobs
 
@@ -138,7 +146,7 @@ SQLite smoke test also passed:
 
 1. Add admin detail pages, filters, and search for textbook structure and crawl outputs.
 2. Add manual edit forms for `TeachingMethod`, `TeachingMethodVariant`, and mappings.
-3. Add link discovery from seed source pages.
-4. Wire `RobotsChecker` and per-domain crawl delays into `CrawlJobRunner`.
-5. Add Playwright fetcher and cookie profile storage for login-gated sources.
-6. Replace rule-based reconciliation with AI-assisted reconciliation using the existing candidate tables.
+3. Wire `RobotsChecker` and per-domain crawl delays into `CrawlJobRunner`.
+4. Add Playwright fetcher and cookie profile storage for login-gated sources.
+5. Add durable agent state or a graph runner if DB-backed tasks become too limited.
+6. Add vector retrieval so ReconciliationAgent compares against richer candidate matches.
