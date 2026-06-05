@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>复核队列 - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      .table-wrap {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 1120px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
+        font-size: 14px;
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f9fafc;
+        color: #596579;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-width: 210px;
+      }
+
+      .actions form {
+        display: inline;
+      }
+
+      button {
+        background: #234f8c;
+        border: 0;
+        border-radius: 6px;
+        color: #ffffff;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        padding: 8px 10px;
+      }
+
+      button.secondary {
+        background: #6b7280;
+      }
+
+      button.danger {
+        background: #9f2d2d;
+      }
+
+      .empty {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        color: #596579;
+        padding: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin">后台首页</a>
+      <h1>复核队列</h1>
+      <a href="/admin/changes">变更记录</a>
+    </header>
+    <main>
+      {% if rows %}
+        <section class="table-wrap" aria-label="复核队列">
+          <table>
+            <thead>
+              <tr>
+                <th>类型</th>
+                <th>标题/事项</th>
+                <th>章节</th>
+                <th>摘要/原因</th>
+                <th>置信度</th>
+                <th>来源</th>
+                <th>复核</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr>
+                  <td>{{ row.type }}</td>
+                  <td>{{ row.title }}</td>
+                  <td>{{ row.section }}</td>
+                  <td>{{ row.summary }}</td>
+                  <td>{{ row.confidence }}</td>
+                  <td>{{ row.source }}</td>
+                  <td>{{ row.status }}</td>
+                  <td>{{ row.created }}</td>
+                  <td>
+                    <div class="actions">
+                      <form method="post" action="/admin/review/{{ 'candidates' if row.kind == 'candidate' else 'items' }}/{{ row.id }}/approve">
+                        <button type="submit">通过</button>
+                      </form>
+                      <form method="post" action="/admin/review/{{ 'candidates' if row.kind == 'candidate' else 'items' }}/{{ row.id }}/needs-edit">
+                        <button class="secondary" type="submit">需编辑</button>
+                      </form>
+                      <form method="post" action="/admin/review/{{ 'candidates' if row.kind == 'candidate' else 'items' }}/{{ row.id }}/reject">
+                        <button class="danger" type="submit">拒绝</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      {% else %}
+        <section class="empty">暂无待复核记录。</section>
+      {% endif %}
+    </main>
+  </body>
+</html>

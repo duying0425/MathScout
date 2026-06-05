@@ -48,7 +48,7 @@
 
       table {
         border-collapse: collapse;
-        min-width: 1040px;
+        min-width: 1120px;
         width: 100%;
       }
 
@@ -135,6 +135,7 @@
               <tr>
                 <th>名称</th>
                 <th>状态</th>
+                <th>发现链接</th>
                 <th>抽取模式</th>
                 <th>总数</th>
                 <th>等待</th>
@@ -148,17 +149,18 @@
             </thead>
             <tbody>
               {% for job in jobs %}
-                <tr>
-                  <td><a href="/admin/crawl-jobs/{{ job.id }}">{{ job.name }}</a></td>
-                  <td>{{ job.status }}</td>
-                  <td>{{ job.extractor_mode_label }}</td>
-                  <td>{{ job.total }}</td>
-                  <td>{{ job.pending }}</td>
-                  <td>{{ job.running }}</td>
-                  <td>{{ job.succeeded }}</td>
-                  <td>{{ job.failed }}</td>
-                  <td>{{ job.blocked }}</td>
-                  <td>{{ job.created }}</td>
+                <tr data-job-id="{{ job.id }}">
+                  <td data-field="name"><a href="/admin/crawl-jobs/{{ job.id }}">{{ job.name }}</a></td>
+                  <td data-field="status">{{ job.status }}</td>
+                  <td data-field="discover_links_label">{{ job.discover_links_label }}</td>
+                  <td data-field="extractor_mode_label">{{ job.extractor_mode_label }}</td>
+                  <td data-field="total">{{ job.total }}</td>
+                  <td data-field="pending">{{ job.pending }}</td>
+                  <td data-field="running">{{ job.running }}</td>
+                  <td data-field="succeeded">{{ job.succeeded }}</td>
+                  <td data-field="failed">{{ job.failed }}</td>
+                  <td data-field="blocked">{{ job.blocked }}</td>
+                  <td data-field="created">{{ job.created }}</td>
                   <td>
                     <div class="actions">
                       {% if job.can_run %}
@@ -192,5 +194,66 @@
         <section class="empty">暂无爬取任务。</section>
       {% endif %}
     </main>
+    <script>
+      const listActiveStatuses = new Set(["pending", "running"]);
+      let listRefreshTimer = null;
+
+      function setCellText(row, field, value) {
+        const cell = row.querySelector(`[data-field="${field}"]`);
+        if (cell) {
+          cell.textContent = value ?? "-";
+        }
+      }
+
+      async function refreshCrawlJobs() {
+        try {
+          const response = await fetch("/admin/crawl-jobs/status", { cache: "no-store" });
+          if (!response.ok) {
+            return;
+          }
+          const data = await response.json();
+          const rows = document.querySelectorAll("[data-job-id]");
+          if (rows.length !== data.jobs.length) {
+            window.location.reload();
+            return;
+          }
+          for (const job of data.jobs) {
+            const row = document.querySelector(`[data-job-id="${job.id}"]`);
+            if (!row) {
+              window.location.reload();
+              return;
+            }
+            const nameLink = row.querySelector('[data-field="name"] a');
+            if (nameLink) {
+              nameLink.textContent = job.name;
+            }
+            for (const field of [
+              "status",
+              "discover_links_label",
+              "extractor_mode_label",
+              "total",
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "blocked",
+              "created",
+            ]) {
+              setCellText(row, field, job[field]);
+            }
+          }
+          if (!data.jobs.some((job) => listActiveStatuses.has(job.raw_status))) {
+            window.clearInterval(listRefreshTimer);
+          }
+        } catch {
+          return;
+        }
+      }
+
+      if (document.querySelector("[data-job-id]")) {
+        listRefreshTimer = window.setInterval(refreshCrawlJobs, 2500);
+        refreshCrawlJobs();
+      }
+    </script>
   </body>
 </html>

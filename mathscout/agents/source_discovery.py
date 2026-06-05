@@ -280,6 +280,19 @@ class SourceDiscoveryAgent:
                     },
                     error="种子页面疑似需要登录。",
                 )
+            if result.status_code >= 400:
+                return AgentResult(
+                    status=AgentStatus.failed,
+                    payload={
+                        "seed_url": seed_url,
+                        "final_url": result.url,
+                        "http_status": result.status_code,
+                        "needs_login": False,
+                        "selected_links": [],
+                        "retryable": result.status_code == 429 or result.status_code >= 500,
+                    },
+                    error=f"种子页面 HTTP {result.status_code}，没有可用于链接发现的内容。",
+                )
             html = _read_text(result.raw_path)
             links = self.discover_from_html(
                 html=html,

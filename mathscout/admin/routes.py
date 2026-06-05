@@ -25,10 +25,12 @@ from mathscout.db.models import (
     CrawlStatus,
     CrawlTask,
     KnowledgePoint,
+    ManualEditAction,
     ManualEditLog,
     NaturalLanguageCommand,
     OrchestrationSession,
     OrchestrationStatus,
+    ReconciliationDecision,
     ReviewItem,
     ReviewStatus,
     Section,
@@ -36,6 +38,7 @@ from mathscout.db.models import (
     SourceSite,
     StudentSkill,
     TeachingMethod,
+    TeachingMethodVariant,
     TextbookSeries,
 )
 from mathscout.db.session import SessionLocal, get_session
@@ -506,9 +509,32 @@ def crawl_jobs(request: Request, session: AdminSession):
     )
 
 
+@router.get("/crawl-jobs/status")
+def crawl_jobs_status(session: AdminSession):
+    jobs = _job_rows(
+        session,
+        select(CrawlJob).order_by(CrawlJob.created_at.desc()).limit(100),
+    )
+    return {"jobs": jobs}
+
+
+@router.get("/crawl-jobs/{job_id}/status")
+def crawl_job_status(job_id: str, session: AdminSession):
+    job = _get_job(session, job_id)
+    return _crawl_job_detail_context(session, job)
+
+
 @router.get("/crawl-jobs/{job_id}")
 def crawl_job_detail(job_id: str, request: Request, session: AdminSession):
     job = _get_job(session, job_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/crawl_job_detail.html",
+        context=_crawl_job_detail_context(session, job),
+    )
+
+
+def _crawl_job_detail_context(session: Session, job: CrawlJob) -> dict[str, Any]:
     tasks = session.scalars(
         select(CrawlTask).where(CrawlTask.job_id == job.id).order_by(CrawlTask.created_at.asc())
     ).all()
@@ -551,16 +577,12 @@ def crawl_job_detail(job_id: str, request: Request, session: AdminSession):
         "新增变体": sum(_as_int(_result_value(task, "variants")) for task in tasks),
         "待复核": _pending_review_for_documents(session, document_ids),
     }
-    return templates.TemplateResponse(
-        request=request,
-        name="admin/crawl_job_detail.html",
-        context={
-            "job": _job_row(session, job),
-            "tasks": task_rows,
-            "documents": document_rows,
-            "saved_summary": saved_summary,
-        },
-    )
+    return {
+        "job": _job_row(session, job),
+        "tasks": task_rows,
+        "documents": document_rows,
+        "saved_summary": saved_summary,
+    }
 
 
 @router.post("/crawl-jobs/{job_id}/run")
@@ -634,30 +656,34 @@ def review_queue(request: Request, session: AdminSession):
     }
     rows = [
         {
-            "类型": "候选知识",
-            "标题/事项": candidate.title,
-            "章节": _display(candidate.chapter_title),
-            "摘要/原因": _truncate(str((candidate.payload or {}).get("summary") or "-"), 220),
-            "置信度": f"{candidate.confidence:.2f}",
-            "来源": _truncate(_display(documents_by_id.get(candidate.document_id).url), 120)
+            "kind": "candidate",
+            "id": str(candidate.id),
+            "type": "候选知识",
+            "title": candidate.title,
+            "section": _display(candidate.chapter_title),
+            "summary": _truncate(str((candidate.payload or {}).get("summary") or "-"), 220),
+            "confidence": f"{candidate.confidence:.2f}",
+            "source": _truncate(_display(documents_by_id.get(candidate.document_id).url), 120)
             if documents_by_id.get(candidate.document_id)
             else "-",
-            "复核": _display(candidate.review_status),
-            "创建时间": _display(candidate.created_at),
+            "status": _display(candidate.review_status),
+            "created": _display(candidate.created_at),
             "_created_at": candidate.created_at,
         }
         for candidate in candidates
     ]
     rows.extend(
         {
-            "类型": _display(item.item_type),
-            "标题/事项": _display(item.target_table or item.target_id),
-            "章节": "-",
-            "摘要/原因": _truncate(str(item.reason or item.payload or "-"), 220),
-            "置信度": "-",
-            "来源": "-",
-            "复核": _display(item.status),
-            "创建时间": _display(item.created_at),
+            "kind": "item",
+            "id": str(item.id),
+            "type": _display(item.item_type),
+            "title": _display(item.target_table or item.target_id),
+            "section": "-",
+            "summary": _truncate(str(item.reason or item.payload or "-"), 220),
+            "confidence": "-",
+            "source": "-",
+            "status": _display(item.status),
+            "created": _display(item.created_at),
             "_created_at": item.created_at,
         }
         for item in session.scalars(
@@ -668,12 +694,76 @@ def review_queue(request: Request, session: AdminSession):
         ).all()
     )
     rows.sort(key=lambda row: row["_created_at"], reverse=True)
-    return _list_response(
+    return templates.TemplateResponse(
         request=request,
-        title="复核队列",
-        columns=["类型", "标题/事项", "章节", "摘要/原因", "置信度", "来源", "复核", "创建时间"],
-        rows=rows,
+        name="admin/review.html",
+        context={"rows": rows},
     )
+
+
+@router.post("/review/candidates/{candidate_id}/{action}")
+def review_candidate_action(
+    candidate_id: str,
+    action: str,
+    session: AdminSession,
+    reason: str = Form(""),
+):
+    candidate = _get_candidate(session, candidate_id)
+    new_status = _review_status_for_action(action)
+    decisions = session.scalars(
+        select(ReconciliationDecision).where(ReconciliationDecision.candidate_id == candidate.id)
+    ).all()
+    primary_decision = decisions[0] if decisions else None
+    before_payload = _candidate_review_payload(candidate, primary_decision)
+
+    candidate.review_status = new_status
+    for decision in decisions:
+        decision.review_status = new_status
+    if new_status in {ReviewStatus.approved, ReviewStatus.rejected}:
+        _set_related_canonical_review_status(session, candidate, decisions, new_status)
+
+    session.add(
+        ManualEditLog(
+            target_table="candidate_knowledge_items",
+            target_id=candidate.id,
+            action=_manual_action_for_review(action),
+            before_payload=before_payload,
+            after_payload=_candidate_review_payload(candidate, primary_decision),
+            reason=reason.strip() or None,
+            editor="admin",
+            related_decision_id=primary_decision.id if primary_decision is not None else None,
+            can_rollback=False,
+        )
+    )
+    session.commit()
+    return _redirect("/admin/review")
+
+
+@router.post("/review/items/{item_id}/{action}")
+def review_item_action(
+    item_id: str,
+    action: str,
+    session: AdminSession,
+    reason: str = Form(""),
+):
+    item = _get_review_item(session, item_id)
+    before_payload = _review_item_payload(item)
+    item.status = _review_status_for_action(action)
+    session.add(
+        ManualEditLog(
+            target_table=item.target_table or "review_items",
+            target_id=item.target_id or item.id,
+            action=_manual_action_for_review(action),
+            before_payload=before_payload,
+            after_payload=_review_item_payload(item),
+            reason=reason.strip() or item.reason,
+            editor="admin",
+            related_review_item_id=item.id,
+            can_rollback=False,
+        )
+    )
+    session.commit()
+    return _redirect("/admin/review")
 
 
 @router.get("/changes")
@@ -988,6 +1078,9 @@ def _job_row(session: Session, job: CrawlJob) -> dict[str, Any]:
         "id": str(job.id),
         "name": job.name,
         "status": _display(job.status),
+        "raw_status": job.status.value,
+        "discover_links": bool(source_filter.get("discover_links", False)),
+        "discover_links_label": "是" if source_filter.get("discover_links") else "否",
         "extractor_mode": source_filter.get("extractor_mode", "auto"),
         "extractor_mode_label": _display_extractor_mode(
             source_filter.get("extractor_mode", "auto")
@@ -1124,6 +1217,8 @@ def _task_note(task: CrawlTask) -> str:
             return "发现完成，但没有生成抓取任务。"
     if result.get("status") == "blocked_login":
         return "页面需要登录，已阻塞。"
+    if result.get("status") == "fetch_failed":
+        return _truncate(str(result.get("error") or "页面抓取失败。"), 160)
     error = result.get("error")
     if error:
         return _truncate(str(error), 160)
@@ -1135,6 +1230,112 @@ def _as_int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _get_candidate(session: Session, candidate_id: str) -> CandidateKnowledgeItem:
+    try:
+        parsed_id = uuid.UUID(candidate_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="找不到候选项。") from exc
+    candidate = session.get(CandidateKnowledgeItem, parsed_id)
+    if candidate is None:
+        raise HTTPException(status_code=404, detail="找不到候选项。")
+    return candidate
+
+
+def _get_review_item(session: Session, item_id: str) -> ReviewItem:
+    try:
+        parsed_id = uuid.UUID(item_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="找不到复核项。") from exc
+    item = session.get(ReviewItem, parsed_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="找不到复核项。")
+    return item
+
+
+def _review_status_for_action(action: str) -> ReviewStatus:
+    if action == "approve":
+        return ReviewStatus.approved
+    if action == "reject":
+        return ReviewStatus.rejected
+    if action == "needs-edit":
+        return ReviewStatus.needs_edit
+    raise HTTPException(status_code=400, detail="未知复核操作。")
+
+
+def _manual_action_for_review(action: str) -> ManualEditAction:
+    if action == "approve":
+        return ManualEditAction.approve_ai_change
+    if action == "reject":
+        return ManualEditAction.reject_ai_change
+    if action == "needs-edit":
+        return ManualEditAction.update
+    raise HTTPException(status_code=400, detail="未知复核操作。")
+
+
+def _candidate_review_payload(
+    candidate: CandidateKnowledgeItem,
+    decision: ReconciliationDecision | None,
+) -> dict[str, Any]:
+    return {
+        "candidate_id": str(candidate.id),
+        "title": candidate.title,
+        "review_status": candidate.review_status.value,
+        "document_id": str(candidate.document_id),
+        "confidence": candidate.confidence,
+        "decision_id": str(decision.id) if decision is not None else None,
+        "decision_status": decision.review_status.value if decision is not None else None,
+    }
+
+
+def _review_item_payload(item: ReviewItem) -> dict[str, Any]:
+    return {
+        "review_item_id": str(item.id),
+        "item_type": item.item_type,
+        "target_table": item.target_table,
+        "target_id": str(item.target_id) if item.target_id is not None else None,
+        "review_status": item.status.value,
+        "reason": item.reason,
+    }
+
+
+def _set_related_canonical_review_status(
+    session: Session,
+    candidate: CandidateKnowledgeItem,
+    decisions: list[ReconciliationDecision],
+    status: ReviewStatus,
+) -> None:
+    evidence_ids = _candidate_evidence_ids(candidate)
+    for decision in decisions:
+        if decision.matched_table != "teaching_methods" or decision.matched_id is None:
+            continue
+        method = session.get(TeachingMethod, decision.matched_id)
+        if method is None:
+            continue
+        if status == ReviewStatus.approved and method.review_status == ReviewStatus.pending:
+            method.review_status = status
+        elif status == ReviewStatus.rejected and method.evidence_id in evidence_ids:
+            method.review_status = status
+
+    variants = session.scalars(
+        select(TeachingMethodVariant).where(
+            TeachingMethodVariant.source_document_id == candidate.document_id
+        )
+    ).all()
+    for variant in variants:
+        if variant.evidence_id in evidence_ids or variant.title == candidate.title:
+            variant.review_status = status
+
+
+def _candidate_evidence_ids(candidate: CandidateKnowledgeItem) -> set[uuid.UUID]:
+    evidence_ids: set[uuid.UUID] = set()
+    for raw_id in candidate.evidence_ids or []:
+        try:
+            evidence_ids.add(uuid.UUID(str(raw_id)))
+        except ValueError:
+            continue
+    return evidence_ids
 
 
 def _get_job(session: Session, job_id: str) -> CrawlJob:

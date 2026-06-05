@@ -44,7 +44,7 @@ class CrawlPipeline:
         self.fetcher = HttpFetcher()
         self.extractor_mode = extractor_mode
 
-    def crawl_url(self, url: str) -> dict[str, int | str]:
+    def crawl_url(self, url: str) -> dict[str, int | str | bool]:
         result = asyncio.run(self.fetcher.fetch(url))
         site = self._get_or_create_site(result.url)
         text = self._parse_fetch_result(result.raw_path, result.content_type)
@@ -60,6 +60,20 @@ class CrawlPipeline:
             text_path=text_path,
             needs_login=result.needs_login,
         )
+        if result.status_code >= 400 and not result.needs_login:
+            document.status = CrawlStatus.failed
+            self.session.commit()
+            return {
+                "url": result.url,
+                "http_status": result.status_code,
+                "document_id": str(document.id),
+                "status": "fetch_failed",
+                "error": f"HTTP {result.status_code}，没有可用于抽取的正文。",
+                "retryable": result.status_code == 429 or result.status_code >= 500,
+                "candidates": 0,
+                "methods": 0,
+                "variants": 0,
+            }
         if result.needs_login:
             self.session.commit()
             return {

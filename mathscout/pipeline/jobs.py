@@ -119,27 +119,36 @@ class CrawlJobRunner:
 
             task_id = task.id
             try:
+                task_error = None
                 if task.task_type == "discover_links":
                     result = self._run_discovery_task(job, task)
-                    if result.get("status") == AgentStatus.failed.value:
-                        raise RuntimeError(str(result.get("error") or "链接发现失败。"))
-                    task.status = (
-                        CrawlStatus.blocked
-                        if result.get("status") == AgentStatus.blocked.value
-                        else CrawlStatus.succeeded
-                    )
+                    if result.get("status") == AgentStatus.blocked.value:
+                        task.status = CrawlStatus.blocked
+                    elif result.get("status") == AgentStatus.failed.value:
+                        task_error = self._record_result_failure(
+                            task,
+                            result,
+                            "链接发现失败。",
+                        )
+                    else:
+                        task.status = CrawlStatus.succeeded
                 else:
                     result = CrawlPipeline(
                         self.session,
                         extractor_mode=self.extractor_mode,
                     ).crawl_url(task.url)
-                    task.status = (
-                        CrawlStatus.blocked
-                        if result.get("status") == "blocked_login"
-                        else CrawlStatus.succeeded
-                )
+                    if result.get("status") == "blocked_login":
+                        task.status = CrawlStatus.blocked
+                    elif result.get("status") == "fetch_failed":
+                        task_error = self._record_result_failure(
+                            task,
+                            result,
+                            "页面抓取失败。",
+                        )
+                    else:
+                        task.status = CrawlStatus.succeeded
                 task.result_json = result
-                task.error = None
+                task.error = task_error
                 processed += 1
                 self._apply_execution_monitor_decision(job, task, result)
             except Exception as exc:
@@ -193,6 +202,19 @@ class CrawlJobRunner:
             "blocked": counts.get(CrawlStatus.blocked, 0),
         }
 
+    def _record_result_failure(
+        self,
+        task: CrawlTask,
+        result: dict[str, object],
+        default_error: str,
+    ) -> str:
+        task.status = CrawlStatus.failed
+        if result.get("retryable") is False:
+            task.retries = self.max_retries
+        else:
+            task.retries = min(task.retries + 1, self.max_retries)
+        return str(result.get("error") or default_error)
+
     def _run_discovery_task(self, job: CrawlJob, task: CrawlTask) -> dict[str, object]:
         source_filter = job.source_filter or {}
         objective = str(source_filter.get("objective") or job.name)
@@ -222,6 +244,7 @@ class CrawlJobRunner:
             "seed_crawl_included": seed_crawl_included,
             "fallback_used": fallback_used,
             "error": result.error,
+            "retryable": result.payload.get("retryable", True),
             "payload": result.payload,
         }
 

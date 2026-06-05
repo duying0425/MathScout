@@ -167,7 +167,7 @@
       }
     </style>
   </head>
-  <body>
+  <body data-job-id="{{ job.id }}">
     <header>
       <a href="/admin/crawl-jobs">任务</a>
       <h1>{{ job.name }}</h1>
@@ -198,23 +198,23 @@
       <section class="grid" aria-label="任务概览">
         <div class="metric">
           <div class="metric-label">状态</div>
-          <div class="metric-value">{{ job.status }}</div>
+          <div class="metric-value" data-job-field="status">{{ job.status }}</div>
         </div>
         <div class="metric">
           <div class="metric-label">任务数</div>
-          <div class="metric-value">{{ job.total }}</div>
+          <div class="metric-value" data-job-field="total">{{ job.total }}</div>
         </div>
         <div class="metric">
           <div class="metric-label">完成</div>
-          <div class="metric-value">{{ job.succeeded }}</div>
+          <div class="metric-value" data-job-field="succeeded">{{ job.succeeded }}</div>
         </div>
         <div class="metric">
           <div class="metric-label">失败</div>
-          <div class="metric-value">{{ job.failed }}</div>
+          <div class="metric-value" data-job-field="failed">{{ job.failed }}</div>
         </div>
         <div class="metric">
           <div class="metric-label">阻塞</div>
-          <div class="metric-value">{{ job.blocked }}</div>
+          <div class="metric-value" data-job-field="blocked">{{ job.blocked }}</div>
         </div>
       </section>
 
@@ -224,7 +224,7 @@
           {% for label, value in saved_summary.items() %}
             <div class="metric">
               <div class="metric-label">{{ label }}</div>
-              <div class="metric-value">{{ value }}</div>
+              <div class="metric-value" data-summary-label="{{ label }}">{{ value }}</div>
             </div>
           {% endfor %}
         </div>
@@ -252,7 +252,7 @@
                   <th>更新时间</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="task-rows">
                 {% for task in tasks %}
                   <tr>
                     <td>{{ task.url }}</td>
@@ -292,7 +292,7 @@
                   <th>抓取时间</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="document-rows">
                 {% for document in documents %}
                   <tr>
                     <td>{{ document.url }}</td>
@@ -310,5 +310,89 @@
         {% endif %}
       </section>
     </main>
+    <script>
+      const detailActiveStatuses = new Set(["pending", "running"]);
+      const jobId = document.body.dataset.jobId;
+      let detailRefreshTimer = null;
+
+      function escapeHtml(value) {
+        return String(value ?? "-")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function setText(selector, value) {
+        const element = document.querySelector(selector);
+        if (element) {
+          element.textContent = value ?? "-";
+        }
+      }
+
+      function renderTableRows(tbody, rows, fields) {
+        if (!tbody) {
+          if (rows.length > 0) {
+            window.location.reload();
+          }
+          return;
+        }
+        tbody.innerHTML = rows.map((row) => {
+          const cells = fields.map((field) => `<td>${escapeHtml(row[field])}</td>`);
+          return `<tr>${cells.join("")}</tr>`;
+        }).join("");
+      }
+
+      async function refreshCrawlJobDetail() {
+        try {
+          const response = await fetch(`/admin/crawl-jobs/${jobId}/status`, { cache: "no-store" });
+          if (!response.ok) {
+            return;
+          }
+          const data = await response.json();
+          for (const field of ["status", "total", "succeeded", "failed", "blocked"]) {
+            setText(`[data-job-field="${field}"]`, data.job[field]);
+          }
+          for (const [label, value] of Object.entries(data.saved_summary)) {
+            setText(`[data-summary-label="${label}"]`, value);
+          }
+          renderTableRows(
+            document.getElementById("task-rows"),
+            data.tasks,
+            [
+              "url",
+              "type",
+              "status",
+              "retries",
+              "http_status",
+              "discovered",
+              "created_tasks",
+              "candidates",
+              "methods",
+              "variants",
+              "note",
+              "error",
+              "updated",
+            ],
+          );
+          renderTableRows(
+            document.getElementById("document-rows"),
+            data.documents,
+            ["url", "status", "http_status", "login", "fetched"],
+          );
+          if (!detailActiveStatuses.has(data.job.raw_status)) {
+            window.clearInterval(detailRefreshTimer);
+          }
+        } catch {
+          return;
+        }
+      }
+
+      if (jobId) {
+        detailRefreshTimer = window.setInterval(refreshCrawlJobDetail, 2500);
+        refreshCrawlJobDetail();
+      }
+    </script>
   </body>
 </html>
