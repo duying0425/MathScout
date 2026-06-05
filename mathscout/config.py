@@ -35,6 +35,7 @@ class Settings(BaseSettings):
         alias="OPENAI_COMPATIBLE_TIMEOUT_SECONDS",
     )
     ai_max_text_chars: int = Field(default=12000, alias="AI_MAX_TEXT_CHARS")
+    display_timezone: str = Field(default="Asia/Shanghai", alias="MATHSCOUT_DISPLAY_TIMEZONE")
 
     @property
     def ai_api_key(self) -> str | None:

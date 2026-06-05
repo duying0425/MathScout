@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from mathscout.agents.control_plane import NaturalLanguageCommandAgent
 from mathscout.agents.orchestrator import AIOrchestratorAgent
+from mathscout.config import get_settings
 from mathscout.db.models import (
     AccessLevel,
     AgentDecision,
@@ -40,6 +41,7 @@ from mathscout.db.models import (
 from mathscout.db.session import SessionLocal, get_session
 from mathscout.orchestration.schemas import NaturalLanguageDirective, OrchestrationContext
 from mathscout.pipeline.jobs import CrawlJobRunner
+from mathscout.utils.time import display_datetime
 
 templates = Jinja2Templates(directory="mathscout/templates")
 router = APIRouter()
@@ -1220,7 +1222,11 @@ def _display(value: Any) -> str:
     if value is None:
         return "-"
     if isinstance(value, datetime):
-        return value.strftime("%Y-%m-%d %H:%M")
+        display_value = display_datetime(
+            value,
+            timezone_name=get_settings().display_timezone,
+        )
+        return display_value.strftime("%Y-%m-%d %H:%M")
     if hasattr(value, "value"):
         raw = str(value.value)
         return DISPLAY_TEXT.get(raw, raw)
