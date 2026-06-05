@@ -161,20 +161,18 @@ The first crawler version writes:
 - canonical methods and teacher variants to `teaching_methods` and `teaching_method_variants`
 - audit decisions to `reconciliation_decisions`
 
-See [docs/first-version-pipeline.md](docs/first-version-pipeline.md) for current limits.
-See [docs/development-status.md](docs/development-status.md) for handoff status and next steps.
 See [docs/development-roadmap.md](docs/development-roadmap.md) for the detailed
-development direction.
+development direction, current baseline, and next work.
 
-## First Milestone
+## Documentation
 
-1. Import the existing `.template` JSON into the normalized tables.
-2. Add seed source sites:
-   - Ministry of Education curriculum standards and textbook catalog.
-   - National Smart Education Platform public course and textbook metadata.
-   - Provincial and city education bureau teaching-book notices.
-   - Public lesson plans, micro-lessons, and teacher research articles.
-3. Crawl metadata and small public documents only.
-4. Extract and review one textbook series end to end.
-
-See [docs/architecture.md](docs/architecture.md) for the full design.
+- [Development Roadmap](docs/development-roadmap.md): current baseline and next
+  development work.
+- [Architecture](docs/architecture.md): concise system design.
+- [Agent Runtime](docs/agent-runtime.md): tasks, tools, observations, hooks, and
+  review contracts.
+- [Data Model](docs/data-model.md): schema responsibilities.
+- [Crawl Policy](docs/crawl-policy.md): access, copyright, robots, and runtime
+  enforcement.
+- [Local Configuration](docs/local-config.md): `.env`, SQLite, AI provider, and
+  local admin run notes.

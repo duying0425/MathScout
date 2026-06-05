@@ -1,4 +1,4 @@
-# Data Model Draft
+# Data Model
 
 Last updated: 2026-06-05.
 
@@ -138,8 +138,8 @@ Current migration behavior:
 
 - Persist step-level task payloads for fetch, parse, extract, reconcile, and
   quality check.
-- Add or finalize `quality_snapshots` if it is not yet represented in the
-  SQLAlchemy models.
+- Add or finalize `quality_snapshots` if it is absent from the SQLAlchemy
+  models.
 - Add human-lock metadata for curated canonical records.
 - Add cookie-profile metadata for user-authorized login sources.
 - Add embedding/vector metadata for retrieval once pgvector or another vector

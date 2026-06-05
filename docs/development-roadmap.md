@@ -55,6 +55,11 @@ The current codebase has a runnable first agent loop:
   delegates to `fetch_url`, `parse_document`, `extract_methods`, and
   `reconcile_candidate`.
 
+Latest validation before this cleanup:
+
+- `ruff check mathscout tests` passed.
+- `pytest -q` passed with 44 tests.
+
 ## Architectural Decisions
 
 - Prefer a simple DB-backed runtime before adding a heavy graph framework.
@@ -162,6 +167,28 @@ Detailed work:
 6. Add review items when a source needs user action.
 7. Add UI for blocked-login source status and cookie-profile refresh.
 
+Initial public baseline sources to keep seeded or easy to re-seed:
+
+- Ministry of Education 2024 compulsory-education textbook catalog:
+  `https://hudong.moe.gov.cn/srcsite/A26/s8001/202408/t20240805_1144254.html`
+- Ministry of Education math curriculum standard PDF:
+  `https://www.moe.gov.cn/srcsite/A26/s8001/202204/W020220510531636118932.pdf`
+- National Smart Education Platform:
+  `https://basic.smartedu.cn`
+- Basic Education Excellent Course Platform:
+  `https://jpk.basic.smartedu.cn`
+
+Source policy notes:
+
+- Manual URLs pasted into the Agent Console take priority over default enabled
+  sources.
+- `SourceDiscoveryAgent` can only select links from fetched page candidates; it
+  must not invent URLs.
+- Public pages with normal login navigation should not be treated as blocked
+  login pages.
+- Protected pages, access restrictions, and HTTP failures stop before extraction
+  and produce structured observations.
+
 ## Retrieval and Reconciliation
 
 Current reconciliation is still shallow. The agent needs richer candidate
@@ -191,18 +218,16 @@ Detailed work:
    stabilize.
 3. Use DB locking/claiming before adding concurrency.
 4. Add per-domain concurrency limits.
-5. Consider Celery, APScheduler, or a custom worker loop only after task payload
-   and observation contracts are stable.
+5. Choose a worker implementation only after task payload and observation
+   contracts are stable.
 
 ## Documentation Map
 
+- `development-roadmap.md`: current baseline, development direction, and
+  detailed next work. Treat this as the planning source of truth.
 - `architecture.md`: product and system architecture.
 - `agent-runtime.md`: runtime contract for agents, tools, observations, hooks,
   tasks, and review.
-- `development-status.md`: current implemented/not-implemented state.
-- `first-version-pipeline.md`: what the runnable first version does.
-- `ai-control-plane.md`: human-Agent interaction and control-plane behavior.
 - `data-model.md`: schema intent and table responsibilities.
 - `crawl-policy.md`: crawl/access/copyright policy and runtime enforcement.
 - `local-config.md`: local `.env`, AI provider, SQLite, and admin run notes.
-- `source-notes.md`: initial source strategy notes.
