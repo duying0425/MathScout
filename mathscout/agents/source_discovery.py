@@ -186,6 +186,34 @@ STATIC_SUFFIXES = {
     ".mp3",
 }
 
+JUNIOR_MIDDLE_SIGNALS = {
+    "初中",
+    "七年级",
+    "八年级",
+    "九年级",
+    "中考",
+    "七上",
+    "七下",
+    "八上",
+    "八下",
+    "九上",
+    "九下",
+}
+
+NON_JUNIOR_STAGE_SIGNALS = {
+    "小学",
+    "一年级",
+    "二年级",
+    "三年级",
+    "四年级",
+    "五年级",
+    "六年级",
+    "高中",
+    "高一",
+    "高二",
+    "高三",
+}
+
 
 @dataclass(frozen=True)
 class PolicyDecision:
@@ -460,6 +488,22 @@ def score_link(url: str, label: str, objective: str) -> tuple[float, list[str]]:
             score += 6
             reasons.append(f"objective:{term}")
 
+    objective_targets_junior = _objective_targets_junior_middle(objective)
+    if objective_targets_junior and _contains_keyword(
+        original_text,
+        text,
+        JUNIOR_MIDDLE_SIGNALS,
+    ):
+        score += 10
+        reasons.append("objective_stage:初中")
+    if objective_targets_junior and _contains_keyword(
+        original_text,
+        text,
+        NON_JUNIOR_STAGE_SIGNALS,
+    ):
+        score -= 24
+        reasons.append("negative:非初中学段")
+
     math_signal = _contains_keyword(original_text, text, MATH_SIGNAL_KEYWORDS)
     specific_signal = _contains_keyword(original_text, text, SPECIFIC_RESOURCE_KEYWORDS)
     objective_signal = any(reason.startswith("objective:") for reason in reasons)
@@ -507,6 +551,13 @@ def _objective_terms(objective: str) -> list[str]:
     if current:
         terms.append("".join(current))
     return terms
+
+
+def _objective_targets_junior_middle(objective: str) -> bool:
+    lowered = objective.lower()
+    if "junior" in lowered or "middle school" in lowered:
+        return True
+    return any(keyword in objective for keyword in JUNIOR_MIDDLE_SIGNALS)
 
 
 def _contains_keyword(original_text: str, lowered_text: str, keywords: set[str]) -> bool:

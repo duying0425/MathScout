@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import httpx
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
@@ -9,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from mathscout.admin import routes as admin_routes
 from mathscout.agents.base import AgentResult, AgentStatus
-from mathscout.crawler.fetchers import FetchResult
+from mathscout.crawler.fetchers import FetchResult, HttpFetcher
 from mathscout.db.base import Base
 from mathscout.db.models import (
     CandidateItemType,
@@ -72,6 +73,39 @@ def test_crawl_pipeline_marks_http_error_as_fetch_failed(tmp_path) -> None:
     assert document.status == CrawlStatus.failed
 
 
+def test_login_detector_allows_public_page_with_login_nav() -> None:
+    response = httpx.Response(
+        200,
+        headers={"content-type": "text/html; charset=utf-8"},
+        request=httpx.Request("GET", "https://www.51jiaoxi.com"),
+        text="""
+        <html>
+          <head><title>教学资源首页</title></head>
+          <body>
+            <a href="/login">登录</a>
+            <a href="/jiaoan/shuxue">初中数学教案</a>
+            <a href="/kejian/shuxue">初中数学课件</a>
+            <a href="/shijuan/shuxue">初中数学试卷</a>
+            <p>公开展示初中数学教学设计、解题方法和课堂资源。</p>
+          </body>
+        </html>
+        """,
+    )
+
+    assert HttpFetcher._looks_login_gated(response) is False
+
+
+def test_login_detector_blocks_protected_page_prompt() -> None:
+    response = httpx.Response(
+        200,
+        headers={"content-type": "text/html; charset=utf-8"},
+        request=httpx.Request("GET", "https://example.com/resource"),
+        text="<html><body>请先登录后查看完整内容。</body></html>",
+    )
+
+    assert HttpFetcher._looks_login_gated(response) is True
+
+
 def test_discovery_http_failure_is_persisted_on_task(monkeypatch) -> None:
     class FakeSourceDiscoveryAgent:
         def run(self, **kwargs):
@@ -111,6 +145,47 @@ def test_discovery_http_failure_is_persisted_on_task(monkeypatch) -> None:
     assert task.retries == CrawlJobRunner.max_retries
     assert task.result_json["status"] == AgentStatus.failed.value
     assert task.error == "种子页面 HTTP 400，不能发现链接。"
+
+
+def test_blocked_job_resume_rechecks_blocked_tasks(monkeypatch) -> None:
+    class FakeSourceDiscoveryAgent:
+        def run(self, **kwargs):
+            return AgentResult(
+                status=AgentStatus.succeeded,
+                payload={
+                    "seed_url": kwargs["seed_url"],
+                    "http_status": 200,
+                    "selected_links": [],
+                    "selected_count": 0,
+                },
+            )
+
+    monkeypatch.setattr(job_module, "SourceDiscoveryAgent", FakeSourceDiscoveryAgent)
+    session_factory = _session_factory()
+    with session_factory() as session:
+        job = CrawlJob(name="test", status=CrawlStatus.blocked, source_filter={})
+        session.add(job)
+        session.flush()
+        task = CrawlTask(
+            job_id=job.id,
+            url="https://example.com",
+            task_type="discover_links",
+            status=CrawlStatus.blocked,
+            result_json={
+                "status": "blocked",
+                "payload": {"needs_login": True},
+            },
+        )
+        session.add(task)
+        session.commit()
+
+        CrawlJobRunner(session).run_job(str(job.id))
+
+        session.refresh(job)
+        session.refresh(task)
+
+    assert task.status == CrawlStatus.succeeded
+    assert job.status == CrawlStatus.succeeded
 
 
 def test_crawl_job_status_routes_are_not_shadowed() -> None:

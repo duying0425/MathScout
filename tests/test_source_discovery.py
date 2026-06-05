@@ -80,6 +80,28 @@ def test_source_discovery_ignores_non_math_and_generic_catalog_links() -> None:
     assert "https://example.com/course/unit6.html" not in urls
 
 
+def test_source_discovery_prefers_junior_middle_when_objective_targets_junior() -> None:
+    html = """
+    <html>
+      <body>
+        <a href="/album-primary.html">小学数学三年级教学设计</a>
+        <a href="/album-junior.html">初中数学七年级下册知识点梳理+练习</a>
+        <a href="/album-high.html">高二下学期数学课件</a>
+      </body>
+    </html>
+    """
+
+    links = SourceDiscoveryAgent().discover_from_html(
+        html=html,
+        seed_url="https://example.com/index.html",
+        objective="收集初中数学教材章节的教师解题方法",
+        max_links=3,
+    )
+
+    urls = [link.url for link in links]
+    assert urls == ["https://example.com/album-junior.html"]
+
+
 def test_discovery_fallback_can_create_crawl_task_for_seed_url() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)

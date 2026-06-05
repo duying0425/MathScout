@@ -65,6 +65,7 @@ class CrawlJobRunner:
         if job.status == CrawlStatus.cancelled:
             return {"job_id": job_id, "status": "cancelled", "processed": 0}
 
+        original_status = job.status
         job.status = CrawlStatus.running
         job.started_at = job.started_at or datetime.utcnow()
         stale_tasks = self.session.scalars(
@@ -77,6 +78,17 @@ class CrawlJobRunner:
             stale_task.status = CrawlStatus.pending
             stale_task.error = "Reset from stale running state before job resume."
             stale_task.updated_at = datetime.utcnow()
+        if original_status == CrawlStatus.blocked:
+            blocked_tasks = self.session.scalars(
+                select(CrawlTask).where(
+                    CrawlTask.job_id == parsed_job_id,
+                    CrawlTask.status == CrawlStatus.blocked,
+                )
+            ).all()
+            for blocked_task in blocked_tasks:
+                blocked_task.status = CrawlStatus.pending
+                blocked_task.error = "Reset from blocked state before job resume."
+                blocked_task.updated_at = datetime.utcnow()
         self.session.commit()
 
         processed = 0
