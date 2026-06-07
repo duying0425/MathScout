@@ -1,0 +1,582 @@
+{
+  "meta": {
+    "dataset_name": "北师大版初中数学知识结构拆分数据",
+    "file_type": "semester_standalone_json",
+    "is_semester_data_completely_independent": false,
+    "independence_note": "本文件可独立读取，但课程设计上与其他学期存在前置知识、后续应用和共享技能体系关系。",
+    "semester_id": "G8A",
+    "semester_name": "八年级上册",
+    "json_author": "ChatGPT（GPT-5.5 Thinking）",
+    "updated_date": "2026-06-02",
+    "textbook_version_info": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "八年级上册",
+      "edition_label": "2025秋版",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "revision_status": "新课标修订教材",
+      "rollout_status": "已进入新课标修订教材滚动使用序列",
+      "confidence": "high",
+      "note": "用于区分：2022 是课程标准版本；2025秋是该册教材投入使用/标称版本。"
+    },
+    "shared_id_policy": {
+      "skill_id_scope": "global",
+      "meaning": "S01-S16 是全局共享技能编号，六个学期文件中含义完全一致。",
+      "example": "S05 在任何学期都表示“数形结合”，不是该学期局部编号。",
+      "chapter_section_id_scope": "semester_prefixed",
+      "meaning_chapter_section": "章节和小节编号带有学期前缀，例如 G7A-C2-S1，因此天然避免跨学期冲突。"
+    }
+  },
+  "shared_skill_catalog": [
+    {
+      "skill_id": "S01",
+      "name": "概念辨析",
+      "description": "抓定义条件、适用范围、反例与边界。"
+    },
+    {
+      "skill_id": "S02",
+      "name": "代数化表示",
+      "description": "把文字、图形、数量关系转化为式、方程、不等式或函数。"
+    },
+    {
+      "skill_id": "S03",
+      "name": "规范运算",
+      "description": "按法则、性质、顺序准确计算，控制符号错误。"
+    },
+    {
+      "skill_id": "S04",
+      "name": "等价变形",
+      "description": "移项、合并、去括号、因式分解、通分、配方、换元等。"
+    },
+    {
+      "skill_id": "S05",
+      "name": "数形结合",
+      "description": "用数轴、坐标系、函数图象、几何图形解释数量关系。"
+    },
+    {
+      "skill_id": "S06",
+      "name": "分类讨论",
+      "description": "根据正负、位置、交点个数、图形形态、参数范围分情况处理。"
+    },
+    {
+      "skill_id": "S07",
+      "name": "方程建模",
+      "description": "找等量关系，设未知数，列方程或方程组解决问题。"
+    },
+    {
+      "skill_id": "S08",
+      "name": "不等式建模",
+      "description": "把范围、最大最小、至少至多等条件转化为不等式或不等式组。"
+    },
+    {
+      "skill_id": "S09",
+      "name": "函数建模",
+      "description": "从表格、图象、关系式中识别变量关系，建立函数模型。"
+    },
+    {
+      "skill_id": "S10",
+      "name": "几何直观",
+      "description": "观察图形结构、添加辅助线、识别基本图形。"
+    },
+    {
+      "skill_id": "S11",
+      "name": "几何证明",
+      "description": "按照“已知—求证—依据—推理”完成逻辑证明。"
+    },
+    {
+      "skill_id": "S12",
+      "name": "全等与相似转化",
+      "description": "用全等、相似、比例关系转化边角关系。"
+    },
+    {
+      "skill_id": "S13",
+      "name": "统计分析",
+      "description": "选择统计量描述集中趋势、离散程度和分布特征。"
+    },
+    {
+      "skill_id": "S14",
+      "name": "概率分析",
+      "description": "用枚举、树状图、列表、频率稳定性分析随机事件。"
+    },
+    {
+      "skill_id": "S15",
+      "name": "模型检验",
+      "description": "检查解的合理性、增根、取值范围、实际意义和单位。"
+    },
+    {
+      "skill_id": "S16",
+      "name": "综合压轴意识",
+      "description": "组合使用函数、方程、几何、分类讨论等工具。"
+    }
+  ],
+  "semester": {
+    "semester_id": "G8A",
+    "name": "八年级上册",
+    "positioning": "打通数、形、函数、方程：勾股定理、实数、坐标、一次函数、方程组、统计分析、初步证明。",
+    "chapters": [
+      {
+        "chapter_id": "G8A-C1",
+        "title": "勾股定理",
+        "sections": [
+          {
+            "section_id": "G8A-C1-S1",
+            "title": "探索勾股定理",
+            "knowledge_points": [
+              "直角三角形三边关系",
+              "勾股定理",
+              "面积割补证明思想"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "已知两边求第三边",
+              "面积法理解定理"
+            ]
+          },
+          {
+            "section_id": "G8A-C1-S2",
+            "title": "一定是直角三角形吗",
+            "knowledge_points": [
+              "勾股定理逆定理",
+              "勾股数",
+              "三角形形状判定"
+            ],
+            "skill_refs": [
+              "S01",
+              "S06",
+              "S10"
+            ],
+            "typical_tasks": [
+              "判断直角三角形",
+              "构造勾股数"
+            ]
+          },
+          {
+            "section_id": "G8A-C1-S3",
+            "title": "勾股定理的应用",
+            "knowledge_points": [
+              "空间或平面中的最短距离",
+              "网格、折叠、路径问题",
+              "勾股模型"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10",
+              "S15"
+            ],
+            "typical_tasks": [
+              "梯子、航行、展开图最短路径"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8A-C2",
+        "title": "实数",
+        "sections": [
+          {
+            "section_id": "G8A-C2-S1",
+            "title": "认识实数",
+            "knowledge_points": [
+              "无理数",
+              "实数分类",
+              "实数与数轴上的点"
+            ],
+            "skill_refs": [
+              "S01",
+              "S05"
+            ],
+            "typical_tasks": [
+              "判断有理数与无理数",
+              "数轴估计位置"
+            ]
+          },
+          {
+            "section_id": "G8A-C2-S2",
+            "title": "平方根与立方根",
+            "knowledge_points": [
+              "平方根",
+              "算术平方根",
+              "立方根",
+              "开方运算"
+            ],
+            "skill_refs": [
+              "S01",
+              "S03",
+              "S06"
+            ],
+            "typical_tasks": [
+              "开方计算",
+              "根号意义辨析"
+            ]
+          },
+          {
+            "section_id": "G8A-C2-S3",
+            "title": "二次根式",
+            "knowledge_points": [
+              "二次根式概念",
+              "被开方数非负",
+              "二次根式化简",
+              "简单二次根式运算"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04",
+              "S15"
+            ],
+            "typical_tasks": [
+              "根式化简",
+              "求字母取值范围"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8A-C3",
+        "title": "位置与坐标",
+        "sections": [
+          {
+            "section_id": "G8A-C3-S1",
+            "title": "确定位置",
+            "knowledge_points": [
+              "有序数对",
+              "位置表示",
+              "方位与距离"
+            ],
+            "skill_refs": [
+              "S02",
+              "S05"
+            ],
+            "typical_tasks": [
+              "用有序数对表示位置",
+              "实际方位描述"
+            ]
+          },
+          {
+            "section_id": "G8A-C3-S2",
+            "title": "平面直角坐标系",
+            "knowledge_points": [
+              "坐标轴、象限",
+              "点的坐标",
+              "坐标与距离初步"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10"
+            ],
+            "typical_tasks": [
+              "描点",
+              "判断象限",
+              "坐标求线段长度"
+            ]
+          },
+          {
+            "section_id": "G8A-C3-S3",
+            "title": "轴对称与坐标变化",
+            "knowledge_points": [
+              "关于 x 轴、y 轴对称的坐标规律",
+              "图形变换与坐标变化"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10"
+            ],
+            "typical_tasks": [
+              "求对称点坐标",
+              "坐标变换作图"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8A-C4",
+        "title": "一次函数",
+        "sections": [
+          {
+            "section_id": "G8A-C4-S1",
+            "title": "函数",
+            "knowledge_points": [
+              "函数概念",
+              "自变量与函数值",
+              "函数的表示方法"
+            ],
+            "skill_refs": [
+              "S01",
+              "S09"
+            ],
+            "typical_tasks": [
+              "判断函数关系",
+              "求函数值"
+            ]
+          },
+          {
+            "section_id": "G8A-C4-S2",
+            "title": "认识一次函数",
+            "knowledge_points": [
+              "一次函数",
+              "正比例函数",
+              "k、b 的意义"
+            ],
+            "skill_refs": [
+              "S01",
+              "S09"
+            ],
+            "typical_tasks": [
+              "识别一次函数",
+              "根据关系写表达式"
+            ]
+          },
+          {
+            "section_id": "G8A-C4-S3",
+            "title": "一次函数的图象",
+            "knowledge_points": [
+              "一次函数图象是直线",
+              "斜率与截距初步",
+              "增减性",
+              "两点确定直线"
+            ],
+            "skill_refs": [
+              "S05",
+              "S09"
+            ],
+            "typical_tasks": [
+              "画一次函数图象",
+              "由图象判断 k、b"
+            ]
+          },
+          {
+            "section_id": "G8A-C4-S4",
+            "title": "一次函数的应用",
+            "knowledge_points": [
+              "一次函数模型",
+              "分段函数初步",
+              "交点意义"
+            ],
+            "skill_refs": [
+              "S02",
+              "S05",
+              "S09",
+              "S15"
+            ],
+            "typical_tasks": [
+              "收费、行程、方案选择问题"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8A-C5",
+        "title": "二元一次方程组",
+        "sections": [
+          {
+            "section_id": "G8A-C5-S1",
+            "title": "认识二元一次方程组",
+            "knowledge_points": [
+              "二元一次方程",
+              "二元一次方程组",
+              "方程组的解"
+            ],
+            "skill_refs": [
+              "S01",
+              "S07"
+            ],
+            "typical_tasks": [
+              "判断方程组",
+              "检验方程组的解"
+            ]
+          },
+          {
+            "section_id": "G8A-C5-S2",
+            "title": "二元一次方程组的解法",
+            "knowledge_points": [
+              "代入消元法",
+              "加减消元法",
+              "消元思想"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04",
+              "S07"
+            ],
+            "typical_tasks": [
+              "解二元一次方程组",
+              "选择合适消元方法"
+            ]
+          },
+          {
+            "section_id": "G8A-C5-S3",
+            "title": "二元一次方程组的应用",
+            "knowledge_points": [
+              "两个未知量建模",
+              "两个等量关系",
+              "实际问题检验"
+            ],
+            "skill_refs": [
+              "S02",
+              "S07",
+              "S15"
+            ],
+            "typical_tasks": [
+              "配套、年龄、行程、利润问题"
+            ]
+          },
+          {
+            "section_id": "G8A-C5-S4",
+            "title": "二元一次方程与一次函数",
+            "knowledge_points": [
+              "一次方程图象是直线",
+              "方程组解与两直线交点",
+              "代数与图象互译"
+            ],
+            "skill_refs": [
+              "S05",
+              "S07",
+              "S09"
+            ],
+            "typical_tasks": [
+              "由交点求方程组解",
+              "用图象理解方程组"
+            ]
+          },
+          {
+            "section_id": "G8A-C5-S5",
+            "title": "三元一次方程组",
+            "knowledge_points": [
+              "三元一次方程组",
+              "逐步消元",
+              "复杂数量关系建模"
+            ],
+            "skill_refs": [
+              "S04",
+              "S07",
+              "S15"
+            ],
+            "typical_tasks": [
+              "解三元一次方程组",
+              "三变量实际问题"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8A-C6",
+        "title": "数据的分析",
+        "sections": [
+          {
+            "section_id": "G8A-C6-S1",
+            "title": "平均数与方差",
+            "knowledge_points": [
+              "平均数",
+              "加权平均数",
+              "方差",
+              "离散程度"
+            ],
+            "skill_refs": [
+              "S03",
+              "S13"
+            ],
+            "typical_tasks": [
+              "计算平均数和方差",
+              "比较稳定性"
+            ]
+          },
+          {
+            "section_id": "G8A-C6-S2",
+            "title": "中位数与箱线图",
+            "knowledge_points": [
+              "中位数",
+              "四分位数",
+              "箱线图",
+              "数据分布"
+            ],
+            "skill_refs": [
+              "S05",
+              "S13"
+            ],
+            "typical_tasks": [
+              "读箱线图",
+              "比较数据分布"
+            ]
+          },
+          {
+            "section_id": "G8A-C6-S3",
+            "title": "哪个团队收益大",
+            "knowledge_points": [
+              "统计量选择",
+              "平均水平与波动风险",
+              "数据决策"
+            ],
+            "skill_refs": [
+              "S13",
+              "S15"
+            ],
+            "typical_tasks": [
+              "根据统计量作决策",
+              "解释数据结论"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8A-C7",
+        "title": "平行线的证明",
+        "sections": [
+          {
+            "section_id": "G8A-C7-S1",
+            "title": "认识证明",
+            "knowledge_points": [
+              "命题、条件、结论",
+              "真命题与假命题",
+              "证明与反例"
+            ],
+            "skill_refs": [
+              "S01",
+              "S11"
+            ],
+            "typical_tasks": [
+              "改写命题",
+              "举反例",
+              "补全证明"
+            ]
+          },
+          {
+            "section_id": "G8A-C7-S2",
+            "title": "平行线的证明",
+            "knowledge_points": [
+              "平行线判定与性质的证明",
+              "演绎推理",
+              "几何证明格式"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "证明平行或角相等",
+              "填写证明理由"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cross_semester_links_related_to_this_file": [
+    {
+      "from": "G7A-C5 一元一次方程",
+      "to": "G8A-C5 二元一次方程组",
+      "relationship": "由一个未知量一个等量关系扩展到多个未知量多个等量关系。"
+    },
+    {
+      "from": "G8A-C4 一次函数",
+      "to": "G8A-C5 二元一次方程与一次函数",
+      "relationship": "把方程组的解解释为两条直线交点，实现代数与图象统一。"
+    },
+    {
+      "from": "G8A-C1 勾股定理",
+      "to": "G9B-C1 直角三角形的边角关系",
+      "relationship": "从边边关系扩展到边角关系，形成解直角三角形工具链。"
+    }
+  ]
+}

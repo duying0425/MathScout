@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>知识结构 - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+
+      main {
+        display: grid;
+        gap: 20px;
+        padding: 24px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      h2 {
+        font-size: 16px;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      .summary {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        max-width: 1040px;
+      }
+
+      .metric,
+      .table-wrap {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+      }
+
+      .metric {
+        padding: 14px;
+      }
+
+      .metric-label {
+        color: #596579;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .metric-value {
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1;
+        margin-top: 8px;
+      }
+
+      .section-block {
+        display: grid;
+        gap: 10px;
+        max-width: 1040px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 720px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
+        font-size: 14px;
+        padding: 12px 14px;
+        text-align: left;
+      }
+
+      th {
+        background: #f9fafc;
+        color: #596579;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin">后台首页</a>
+      <h1>知识结构</h1>
+    </header>
+    <main>
+      <section class="summary" aria-label="知识结构概览">
+        {% for label, value in summary.items() %}
+          <div class="metric">
+            <div class="metric-label">{{ label }}</div>
+            <div class="metric-value">{{ value }}</div>
+          </div>
+        {% endfor %}
+      </section>
+
+      <section class="section-block" aria-label="册别">
+        <h2>册别</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>编码</th>
+                <th>册别</th>
+                <th>章节数</th>
+                <th>小节数</th>
+                <th>知识点数</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for book in books %}
+                <tr>
+                  <td>{{ book.book_code }}</td>
+                  <td>{{ book.label }}</td>
+                  <td>{{ book.chapter_count }}</td>
+                  <td>{{ book.section_count }}</td>
+                  <td>{{ book.knowledge_count }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section-block" aria-label="小节">
+        <h2>小节</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>册别</th>
+                <th>章节</th>
+                <th>小节</th>
+                <th>知识点数</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for section in sections %}
+                <tr>
+                  <td>{{ section.book_code }}</td>
+                  <td>{{ section.chapter_title }}</td>
+                  <td>{{ section.section_title }}</td>
+                  <td>{{ section.knowledge_count }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

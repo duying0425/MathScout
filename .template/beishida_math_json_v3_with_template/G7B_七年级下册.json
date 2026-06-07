@@ -1,0 +1,531 @@
+{
+  "meta": {
+    "dataset_name": "北师大版初中数学知识结构拆分数据",
+    "file_type": "semester_standalone_json",
+    "is_semester_data_completely_independent": false,
+    "independence_note": "本文件可独立读取，但课程设计上与其他学期存在前置知识、后续应用和共享技能体系关系。",
+    "semester_id": "G7B",
+    "semester_name": "七年级下册",
+    "json_author": "ChatGPT（GPT-5.5 Thinking）",
+    "updated_date": "2026-06-02",
+    "textbook_version_info": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "七年级下册",
+      "edition_label": "2025春版",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "revision_status": "新课标修订教材",
+      "rollout_status": "已进入新课标修订教材滚动使用序列",
+      "confidence": "high",
+      "note": "用于区分：2022 是课程标准版本；2025春是该册教材投入使用/标称版本。"
+    },
+    "shared_id_policy": {
+      "skill_id_scope": "global",
+      "meaning": "S01-S16 是全局共享技能编号，六个学期文件中含义完全一致。",
+      "example": "S05 在任何学期都表示“数形结合”，不是该学期局部编号。",
+      "chapter_section_id_scope": "semester_prefixed",
+      "meaning_chapter_section": "章节和小节编号带有学期前缀，例如 G7A-C2-S1，因此天然避免跨学期冲突。"
+    }
+  },
+  "shared_skill_catalog": [
+    {
+      "skill_id": "S01",
+      "name": "概念辨析",
+      "description": "抓定义条件、适用范围、反例与边界。"
+    },
+    {
+      "skill_id": "S02",
+      "name": "代数化表示",
+      "description": "把文字、图形、数量关系转化为式、方程、不等式或函数。"
+    },
+    {
+      "skill_id": "S03",
+      "name": "规范运算",
+      "description": "按法则、性质、顺序准确计算，控制符号错误。"
+    },
+    {
+      "skill_id": "S04",
+      "name": "等价变形",
+      "description": "移项、合并、去括号、因式分解、通分、配方、换元等。"
+    },
+    {
+      "skill_id": "S05",
+      "name": "数形结合",
+      "description": "用数轴、坐标系、函数图象、几何图形解释数量关系。"
+    },
+    {
+      "skill_id": "S06",
+      "name": "分类讨论",
+      "description": "根据正负、位置、交点个数、图形形态、参数范围分情况处理。"
+    },
+    {
+      "skill_id": "S07",
+      "name": "方程建模",
+      "description": "找等量关系，设未知数，列方程或方程组解决问题。"
+    },
+    {
+      "skill_id": "S08",
+      "name": "不等式建模",
+      "description": "把范围、最大最小、至少至多等条件转化为不等式或不等式组。"
+    },
+    {
+      "skill_id": "S09",
+      "name": "函数建模",
+      "description": "从表格、图象、关系式中识别变量关系，建立函数模型。"
+    },
+    {
+      "skill_id": "S10",
+      "name": "几何直观",
+      "description": "观察图形结构、添加辅助线、识别基本图形。"
+    },
+    {
+      "skill_id": "S11",
+      "name": "几何证明",
+      "description": "按照“已知—求证—依据—推理”完成逻辑证明。"
+    },
+    {
+      "skill_id": "S12",
+      "name": "全等与相似转化",
+      "description": "用全等、相似、比例关系转化边角关系。"
+    },
+    {
+      "skill_id": "S13",
+      "name": "统计分析",
+      "description": "选择统计量描述集中趋势、离散程度和分布特征。"
+    },
+    {
+      "skill_id": "S14",
+      "name": "概率分析",
+      "description": "用枚举、树状图、列表、频率稳定性分析随机事件。"
+    },
+    {
+      "skill_id": "S15",
+      "name": "模型检验",
+      "description": "检查解的合理性、增根、取值范围、实际意义和单位。"
+    },
+    {
+      "skill_id": "S16",
+      "name": "综合压轴意识",
+      "description": "组合使用函数、方程、几何、分类讨论等工具。"
+    }
+  ],
+  "semester": {
+    "semester_id": "G7B",
+    "name": "七年级下册",
+    "positioning": "进入代数运算系统化与几何推理启蒙：整式运算、平行线、三角形全等、轴对称、变量表达。",
+    "chapters": [
+      {
+        "chapter_id": "G7B-C1",
+        "title": "整式的乘除",
+        "sections": [
+          {
+            "section_id": "G7B-C1-S1",
+            "title": "幂的乘除",
+            "knowledge_points": [
+              "同底数幂乘法",
+              "幂的乘方",
+              "积的乘方",
+              "同底数幂除法",
+              "零指数幂与负整数指数幂初步"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04"
+            ],
+            "typical_tasks": [
+              "指数运算法则辨析",
+              "幂运算化简"
+            ]
+          },
+          {
+            "section_id": "G7B-C1-S2",
+            "title": "整式的乘法",
+            "knowledge_points": [
+              "单项式乘单项式",
+              "单项式乘多项式",
+              "多项式乘多项式",
+              "面积模型解释乘法"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04",
+              "S05"
+            ],
+            "typical_tasks": [
+              "整式乘法化简",
+              "几何面积与代数式对应"
+            ]
+          },
+          {
+            "section_id": "G7B-C1-S3",
+            "title": "乘法公式",
+            "knowledge_points": [
+              "平方差公式",
+              "完全平方公式",
+              "公式的几何解释",
+              "公式正用与逆用"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04",
+              "S05"
+            ],
+            "typical_tasks": [
+              "公式计算",
+              "公式变形求值"
+            ]
+          },
+          {
+            "section_id": "G7B-C1-S4",
+            "title": "整式的除法",
+            "knowledge_points": [
+              "单项式除以单项式",
+              "多项式除以单项式",
+              "幂运算与整式除法综合"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04"
+            ],
+            "typical_tasks": [
+              "整式除法化简",
+              "含幂综合运算"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7B-C2",
+        "title": "相交线与平行线",
+        "sections": [
+          {
+            "section_id": "G7B-C2-S1",
+            "title": "两条直线的位置关系",
+            "knowledge_points": [
+              "相交线和平行线",
+              "对顶角",
+              "邻补角",
+              "垂线与垂直"
+            ],
+            "skill_refs": [
+              "S01",
+              "S10"
+            ],
+            "typical_tasks": [
+              "角关系识别",
+              "基本角度计算"
+            ]
+          },
+          {
+            "section_id": "G7B-C2-S2",
+            "title": "探索直线平行的条件",
+            "knowledge_points": [
+              "同位角、内错角、同旁内角",
+              "平行线判定条件",
+              "几何语言表达"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "判定两直线平行",
+              "根据角关系补充理由"
+            ]
+          },
+          {
+            "section_id": "G7B-C2-S3",
+            "title": "平行线的性质",
+            "knowledge_points": [
+              "两直线平行同位角相等",
+              "内错角相等",
+              "同旁内角互补",
+              "判定与性质的区别"
+            ],
+            "skill_refs": [
+              "S01",
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "平行线求角",
+              "性质与判定混合证明"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7B-C3",
+        "title": "概率初步",
+        "sections": [
+          {
+            "section_id": "G7B-C3-S1",
+            "title": "感受可能性",
+            "knowledge_points": [
+              "必然事件",
+              "不可能事件",
+              "随机事件",
+              "可能性大小"
+            ],
+            "skill_refs": [
+              "S01",
+              "S14"
+            ],
+            "typical_tasks": [
+              "事件分类",
+              "比较可能性大小"
+            ]
+          },
+          {
+            "section_id": "G7B-C3-S2",
+            "title": "频率的稳定性",
+            "knowledge_points": [
+              "试验频率",
+              "大量重复试验",
+              "频率稳定于概率的思想"
+            ],
+            "skill_refs": [
+              "S13",
+              "S14"
+            ],
+            "typical_tasks": [
+              "根据试验数据估计概率",
+              "判断样本量影响"
+            ]
+          },
+          {
+            "section_id": "G7B-C3-S3",
+            "title": "等可能事件的概率",
+            "knowledge_points": [
+              "等可能结果",
+              "概率公式",
+              "简单枚举"
+            ],
+            "skill_refs": [
+              "S14",
+              "S15"
+            ],
+            "typical_tasks": [
+              "摸球、掷骰子、转盘问题",
+              "列举所有等可能结果"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7B-C4",
+        "title": "三角形",
+        "sections": [
+          {
+            "section_id": "G7B-C4-S1",
+            "title": "认识三角形",
+            "knowledge_points": [
+              "三角形三边关系",
+              "三角形内角和",
+              "中线、高线、角平分线",
+              "三角形分类"
+            ],
+            "skill_refs": [
+              "S01",
+              "S06",
+              "S10"
+            ],
+            "typical_tasks": [
+              "判断能否构成三角形",
+              "角度计算",
+              "画三角形重要线段"
+            ]
+          },
+          {
+            "section_id": "G7B-C4-S2",
+            "title": "全等三角形",
+            "knowledge_points": [
+              "全等图形",
+              "全等三角形对应边对应角",
+              "全等的符号表达"
+            ],
+            "skill_refs": [
+              "S01",
+              "S10",
+              "S12"
+            ],
+            "typical_tasks": [
+              "找对应元素",
+              "用全等关系求边角"
+            ]
+          },
+          {
+            "section_id": "G7B-C4-S3",
+            "title": "探索三角形全等的条件",
+            "knowledge_points": [
+              "SSS",
+              "SAS",
+              "ASA",
+              "AAS",
+              "HL 初步",
+              "判定条件的适用边界"
+            ],
+            "skill_refs": [
+              "S06",
+              "S11",
+              "S12"
+            ],
+            "typical_tasks": [
+              "证明三角形全等",
+              "补充全等条件"
+            ]
+          },
+          {
+            "section_id": "G7B-C4-S4",
+            "title": "利用三角形全等测距离",
+            "knowledge_points": [
+              "全等模型的实际应用",
+              "不可直接测量距离的转化",
+              "作图与测量结合"
+            ],
+            "skill_refs": [
+              "S07",
+              "S10",
+              "S12",
+              "S15"
+            ],
+            "typical_tasks": [
+              "测河宽、测距离模型",
+              "构造全等三角形"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7B-C5",
+        "title": "生活中的轴对称",
+        "sections": [
+          {
+            "section_id": "G7B-C5-S1",
+            "title": "轴对称及其性质",
+            "knowledge_points": [
+              "轴对称图形",
+              "两个图形成轴对称",
+              "对应点连线被对称轴垂直平分",
+              "轴对称保距保角"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10"
+            ],
+            "typical_tasks": [
+              "作对称点",
+              "利用对称性质求距离和角"
+            ]
+          },
+          {
+            "section_id": "G7B-C5-S2",
+            "title": "简单的轴对称图形",
+            "knowledge_points": [
+              "线段垂直平分线",
+              "角平分线",
+              "等腰三角形轴对称性质",
+              "最短路径初步"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11",
+              "S12"
+            ],
+            "typical_tasks": [
+              "对称作图",
+              "等腰三角形求角",
+              "将军饮马模型初步"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7B-C6",
+        "title": "变量之间的关系",
+        "sections": [
+          {
+            "section_id": "G7B-C6-S1",
+            "title": "现实中的变量",
+            "knowledge_points": [
+              "变量与常量",
+              "自变量与因变量",
+              "变化关系"
+            ],
+            "skill_refs": [
+              "S01",
+              "S09"
+            ],
+            "typical_tasks": [
+              "识别变量",
+              "描述实际变化过程"
+            ]
+          },
+          {
+            "section_id": "G7B-C6-S2",
+            "title": "用表格表示变量之间的关系",
+            "knowledge_points": [
+              "表格呈现对应关系",
+              "从表格读变化趋势",
+              "补表与预测"
+            ],
+            "skill_refs": [
+              "S05",
+              "S09"
+            ],
+            "typical_tasks": [
+              "读表填表",
+              "根据表格判断增减"
+            ]
+          },
+          {
+            "section_id": "G7B-C6-S3",
+            "title": "用关系式表示变量之间的关系",
+            "knowledge_points": [
+              "关系式",
+              "代入求值",
+              "变量取值范围初步"
+            ],
+            "skill_refs": [
+              "S02",
+              "S03",
+              "S09"
+            ],
+            "typical_tasks": [
+              "列关系式",
+              "根据关系式求值"
+            ]
+          },
+          {
+            "section_id": "G7B-C6-S4",
+            "title": "用图象表示变量之间的关系",
+            "knowledge_points": [
+              "坐标图象初步",
+              "图象上的点与实际意义",
+              "变化趋势的图象表达"
+            ],
+            "skill_refs": [
+              "S05",
+              "S09"
+            ],
+            "typical_tasks": [
+              "读图象",
+              "匹配情境与图象"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cross_semester_links_related_to_this_file": [
+    {
+      "from": "G7A-C3 整式及其加减",
+      "to": "G7B-C1 整式的乘除",
+      "relationship": "由加减扩展到乘除和乘法公式，为因式分解与分式运算打基础。"
+    },
+    {
+      "from": "G7B-C4 三角形全等",
+      "to": "G9A-C4 图形的相似",
+      "relationship": "从形状和大小完全相同，提升到形状相同、大小成比例。"
+    }
+  ]
+}

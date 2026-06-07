@@ -1,0 +1,1 @@
+"""MathScout application package."""

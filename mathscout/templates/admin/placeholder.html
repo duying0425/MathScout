@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      .panel {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        max-width: 820px;
+        padding: 16px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li {
+        line-height: 1.8;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin">后台首页</a>
+      <h1>{{ title }}</h1>
+    </header>
+    <main>
+      <section class="panel">
+        <ul>
+          {% for item in items %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

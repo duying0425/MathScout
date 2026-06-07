@@ -1,0 +1,543 @@
+{
+  "meta": {
+    "dataset_name": "北师大版初中数学知识结构拆分数据",
+    "file_type": "semester_standalone_json",
+    "is_semester_data_completely_independent": false,
+    "independence_note": "本文件可独立读取，但课程设计上与其他学期存在前置知识、后续应用和共享技能体系关系。",
+    "semester_id": "G8B",
+    "semester_name": "八年级下册",
+    "json_author": "ChatGPT（GPT-5.5 Thinking）",
+    "updated_date": "2026-06-02",
+    "textbook_version_info": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "八年级下册",
+      "edition_label": "2026春版",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "revision_status": "新课标修订教材",
+      "rollout_status": "按七年级起始年级滚动替换节奏进入新课标修订教材序列；具体以学校实际用书封面/版权页为准",
+      "confidence": "medium",
+      "note": "用于区分：2022 是课程标准版本；2026春是该册教材投入使用/标称版本。"
+    },
+    "shared_id_policy": {
+      "skill_id_scope": "global",
+      "meaning": "S01-S16 是全局共享技能编号，六个学期文件中含义完全一致。",
+      "example": "S05 在任何学期都表示“数形结合”，不是该学期局部编号。",
+      "chapter_section_id_scope": "semester_prefixed",
+      "meaning_chapter_section": "章节和小节编号带有学期前缀，例如 G7A-C2-S1，因此天然避免跨学期冲突。"
+    }
+  },
+  "shared_skill_catalog": [
+    {
+      "skill_id": "S01",
+      "name": "概念辨析",
+      "description": "抓定义条件、适用范围、反例与边界。"
+    },
+    {
+      "skill_id": "S02",
+      "name": "代数化表示",
+      "description": "把文字、图形、数量关系转化为式、方程、不等式或函数。"
+    },
+    {
+      "skill_id": "S03",
+      "name": "规范运算",
+      "description": "按法则、性质、顺序准确计算，控制符号错误。"
+    },
+    {
+      "skill_id": "S04",
+      "name": "等价变形",
+      "description": "移项、合并、去括号、因式分解、通分、配方、换元等。"
+    },
+    {
+      "skill_id": "S05",
+      "name": "数形结合",
+      "description": "用数轴、坐标系、函数图象、几何图形解释数量关系。"
+    },
+    {
+      "skill_id": "S06",
+      "name": "分类讨论",
+      "description": "根据正负、位置、交点个数、图形形态、参数范围分情况处理。"
+    },
+    {
+      "skill_id": "S07",
+      "name": "方程建模",
+      "description": "找等量关系，设未知数，列方程或方程组解决问题。"
+    },
+    {
+      "skill_id": "S08",
+      "name": "不等式建模",
+      "description": "把范围、最大最小、至少至多等条件转化为不等式或不等式组。"
+    },
+    {
+      "skill_id": "S09",
+      "name": "函数建模",
+      "description": "从表格、图象、关系式中识别变量关系，建立函数模型。"
+    },
+    {
+      "skill_id": "S10",
+      "name": "几何直观",
+      "description": "观察图形结构、添加辅助线、识别基本图形。"
+    },
+    {
+      "skill_id": "S11",
+      "name": "几何证明",
+      "description": "按照“已知—求证—依据—推理”完成逻辑证明。"
+    },
+    {
+      "skill_id": "S12",
+      "name": "全等与相似转化",
+      "description": "用全等、相似、比例关系转化边角关系。"
+    },
+    {
+      "skill_id": "S13",
+      "name": "统计分析",
+      "description": "选择统计量描述集中趋势、离散程度和分布特征。"
+    },
+    {
+      "skill_id": "S14",
+      "name": "概率分析",
+      "description": "用枚举、树状图、列表、频率稳定性分析随机事件。"
+    },
+    {
+      "skill_id": "S15",
+      "name": "模型检验",
+      "description": "检查解的合理性、增根、取值范围、实际意义和单位。"
+    },
+    {
+      "skill_id": "S16",
+      "name": "综合压轴意识",
+      "description": "组合使用函数、方程、几何、分类讨论等工具。"
+    }
+  ],
+  "semester": {
+    "semester_id": "G8B",
+    "name": "八年级下册",
+    "positioning": "进入证明与代数变形深化：三角形证明、不等式、图形变换、因式分解、分式、平行四边形。",
+    "chapters": [
+      {
+        "chapter_id": "G8B-C1",
+        "title": "三角形的证明",
+        "sections": [
+          {
+            "section_id": "G8B-C1-S1",
+            "title": "三角形内角和定理",
+            "knowledge_points": [
+              "三角形内角和",
+              "外角性质",
+              "辅助线证明"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "角度证明与计算",
+              "添加平行辅助线"
+            ]
+          },
+          {
+            "section_id": "G8B-C1-S2",
+            "title": "等腰三角形",
+            "knowledge_points": [
+              "等腰三角形性质",
+              "等腰三角形判定",
+              "等边三角形性质与判定"
+            ],
+            "skill_refs": [
+              "S06",
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "等边对等角",
+              "等角对等边",
+              "分类求角"
+            ]
+          },
+          {
+            "section_id": "G8B-C1-S3",
+            "title": "直角三角形",
+            "knowledge_points": [
+              "直角三角形全等",
+              "HL 判定",
+              "30°角所对直角边性质",
+              "勾股定理综合"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11",
+              "S12"
+            ],
+            "typical_tasks": [
+              "直角三角形证明",
+              "HL 应用"
+            ]
+          },
+          {
+            "section_id": "G8B-C1-S4",
+            "title": "线段的垂直平分线",
+            "knowledge_points": [
+              "垂直平分线性质",
+              "垂直平分线判定",
+              "到两点距离相等的点的轨迹"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "证明点在线段垂直平分线上",
+              "尺规作图初步"
+            ]
+          },
+          {
+            "section_id": "G8B-C1-S5",
+            "title": "角平分线",
+            "knowledge_points": [
+              "角平分线性质",
+              "角平分线判定",
+              "到角两边距离相等"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11"
+            ],
+            "typical_tasks": [
+              "证明点在角平分线上",
+              "距离相等转角平分线"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8B-C2",
+        "title": "不等式与不等式组",
+        "sections": [
+          {
+            "section_id": "G8B-C2-S1",
+            "title": "不等式及其性质",
+            "knowledge_points": [
+              "不等关系",
+              "不等式",
+              "不等式基本性质",
+              "乘除负数变号"
+            ],
+            "skill_refs": [
+              "S01",
+              "S03",
+              "S08"
+            ],
+            "typical_tasks": [
+              "判断不等关系",
+              "利用性质变形"
+            ]
+          },
+          {
+            "section_id": "G8B-C2-S2",
+            "title": "一元一次不等式",
+            "knowledge_points": [
+              "一元一次不等式",
+              "解集",
+              "数轴表示解集"
+            ],
+            "skill_refs": [
+              "S03",
+              "S05",
+              "S08"
+            ],
+            "typical_tasks": [
+              "解不等式",
+              "数轴表示范围"
+            ]
+          },
+          {
+            "section_id": "G8B-C2-S3",
+            "title": "一元一次不等式与一次函数",
+            "knowledge_points": [
+              "函数值大小与不等式",
+              "图象交点与不等式解集",
+              "代数与图象互译"
+            ],
+            "skill_refs": [
+              "S05",
+              "S08",
+              "S09"
+            ],
+            "typical_tasks": [
+              "用图象解不等式",
+              "比较一次函数大小"
+            ]
+          },
+          {
+            "section_id": "G8B-C2-S4",
+            "title": "一元一次不等式组",
+            "knowledge_points": [
+              "不等式组",
+              "公共解集",
+              "数轴取交集"
+            ],
+            "skill_refs": [
+              "S05",
+              "S06",
+              "S08"
+            ],
+            "typical_tasks": [
+              "解不等式组",
+              "参数范围初步"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8B-C3",
+        "title": "图形的平移与旋转",
+        "sections": [
+          {
+            "section_id": "G8B-C3-S1",
+            "title": "图形的平移",
+            "knowledge_points": [
+              "平移方向与距离",
+              "平移保距保角",
+              "坐标平移规律"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10"
+            ],
+            "typical_tasks": [
+              "作平移图形",
+              "求平移后坐标"
+            ]
+          },
+          {
+            "section_id": "G8B-C3-S2",
+            "title": "图形的旋转",
+            "knowledge_points": [
+              "旋转中心",
+              "旋转角",
+              "旋转方向",
+              "旋转保距保角"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10"
+            ],
+            "typical_tasks": [
+              "作旋转图形",
+              "识别旋转中心与角"
+            ]
+          },
+          {
+            "section_id": "G8B-C3-S3",
+            "title": "简单的图案设计",
+            "knowledge_points": [
+              "平移、旋转、轴对称的综合应用",
+              "图案中的几何变换"
+            ],
+            "skill_refs": [
+              "S05",
+              "S10",
+              "S15"
+            ],
+            "typical_tasks": [
+              "图案补全",
+              "分析图形变换过程"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8B-C4",
+        "title": "因式分解",
+        "sections": [
+          {
+            "section_id": "G8B-C4-S1",
+            "title": "因式分解",
+            "knowledge_points": [
+              "因式分解概念",
+              "整式乘法与因式分解互逆",
+              "分解到不能再分解"
+            ],
+            "skill_refs": [
+              "S01",
+              "S04"
+            ],
+            "typical_tasks": [
+              "判断是否为因式分解",
+              "整式乘法逆向思考"
+            ]
+          },
+          {
+            "section_id": "G8B-C4-S2",
+            "title": "提公因式法",
+            "knowledge_points": [
+              "公因式",
+              "提取公因式",
+              "整体公因式"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04"
+            ],
+            "typical_tasks": [
+              "提公因式分解",
+              "含多项式整体提取"
+            ]
+          },
+          {
+            "section_id": "G8B-C4-S3",
+            "title": "公式法",
+            "knowledge_points": [
+              "平方差公式分解",
+              "完全平方公式分解",
+              "先提后套公式"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04",
+              "S06"
+            ],
+            "typical_tasks": [
+              "公式分解",
+              "多步骤因式分解"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8B-C5",
+        "title": "分式与分式方程",
+        "sections": [
+          {
+            "section_id": "G8B-C5-S1",
+            "title": "分式及其基本性质",
+            "knowledge_points": [
+              "分式概念",
+              "分式有意义条件",
+              "分式基本性质",
+              "约分"
+            ],
+            "skill_refs": [
+              "S01",
+              "S04",
+              "S15"
+            ],
+            "typical_tasks": [
+              "求分式有意义条件",
+              "分式约分"
+            ]
+          },
+          {
+            "section_id": "G8B-C5-S2",
+            "title": "分式的运算",
+            "knowledge_points": [
+              "分式乘除",
+              "分式加减",
+              "通分",
+              "混合运算"
+            ],
+            "skill_refs": [
+              "S03",
+              "S04",
+              "S15"
+            ],
+            "typical_tasks": [
+              "分式化简",
+              "先化简再求值"
+            ]
+          },
+          {
+            "section_id": "G8B-C5-S3",
+            "title": "分式方程",
+            "knowledge_points": [
+              "分式方程",
+              "去分母",
+              "增根",
+              "实际问题中的分式方程"
+            ],
+            "skill_refs": [
+              "S04",
+              "S07",
+              "S15"
+            ],
+            "typical_tasks": [
+              "解分式方程并验根",
+              "工程、速度、效率问题"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G8B-C6",
+        "title": "平行四边形",
+        "sections": [
+          {
+            "section_id": "G8B-C6-S1",
+            "title": "平行四边形的性质及判定",
+            "knowledge_points": [
+              "平行四边形对边、对角、对角线性质",
+              "平行四边形判定方法",
+              "性质与判定互用"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11",
+              "S12"
+            ],
+            "typical_tasks": [
+              "证明四边形为平行四边形",
+              "利用性质求边角"
+            ]
+          },
+          {
+            "section_id": "G8B-C6-S2",
+            "title": "三角形的中位线",
+            "knowledge_points": [
+              "三角形中位线定理",
+              "中点模型",
+              "平行与倍半关系"
+            ],
+            "skill_refs": [
+              "S10",
+              "S11",
+              "S12"
+            ],
+            "typical_tasks": [
+              "中点辅助线",
+              "倍半关系证明"
+            ]
+          },
+          {
+            "section_id": "G8B-C6-S3",
+            "title": "多边形的内角和与外角和",
+            "knowledge_points": [
+              "多边形内角和公式",
+              "外角和",
+              "多边形分割为三角形"
+            ],
+            "skill_refs": [
+              "S03",
+              "S05",
+              "S10"
+            ],
+            "typical_tasks": [
+              "内外角计算",
+              "正多边形角度问题"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cross_semester_links_related_to_this_file": [
+    {
+      "from": "G8B-C4 因式分解",
+      "to": "G8B-C5 分式与分式方程",
+      "relationship": "因式分解是分式约分、通分和解分式方程的重要工具。"
+    },
+    {
+      "from": "G8B-C6 平行四边形",
+      "to": "G9A-C1 特殊平行四边形",
+      "relationship": "从一般四边形性质判定升级到矩形、菱形、正方形的综合判定。"
+    }
+  ]
+}

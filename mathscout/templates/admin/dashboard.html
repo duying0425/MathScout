@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+      body { margin: 0; }
+      header {
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 0 24px;
+        height: 52px;
+      }
+      .logo { font-weight: 700; font-size: 16px; color: #1d2433; text-decoration: none; margin-right: 24px; }
+      nav { display: flex; gap: 2px; }
+      nav a {
+        color: #596579;
+        text-decoration: none;
+        font-size: 14px;
+        padding: 6px 12px;
+        border-radius: 6px;
+      }
+      nav a:hover { background: #f0f2f5; color: #1d2433; }
+      nav a.active { background: #e8edf5; color: #234f8c; font-weight: 600; }
+      main { padding: 28px 24px; display: grid; gap: 20px; max-width: 1100px; }
+      h2 { margin: 0 0 14px; font-size: 15px; color: #1d2433; }
+      .step-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+      .step {
+        background: #fff;
+        border: 1px solid #d9dee8;
+        border-radius: 10px;
+        padding: 20px;
+        display: grid;
+        gap: 12px;
+      }
+      .step-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: #596579;
+      }
+      .step-title { font-size: 17px; font-weight: 700; margin: 0; }
+      .step-count { font-size: 28px; font-weight: 700; color: #234f8c; line-height: 1; }
+      .step-count.warn { color: #b45309; }
+      .step-count.ok { color: #16a34a; }
+      textarea, input[type=text], input[type=number] {
+        border: 1px solid #cbd3df;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 13px;
+        padding: 8px 10px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      textarea { min-height: 90px; resize: vertical; }
+      .field { display: grid; gap: 5px; }
+      .field label { font-size: 12px; font-weight: 600; color: #596579; }
+      .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+      select {
+        border: 1px solid #cbd3df;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 13px;
+        padding: 8px 10px;
+        color: #1d2433;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      button {
+        background: #234f8c;
+        border: 0;
+        border-radius: 6px;
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 9px 16px;
+        white-space: nowrap;
+      }
+      button:hover { background: #1a3d6e; }
+      .btn-link {
+        display: inline-block;
+        background: #234f8c;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 9px 16px;
+      }
+      .btn-link:hover { background: #1a3d6e; }
+      .hint { font-size: 12px; color: #596579; margin: 0; }
+      .stats-row { display: flex; gap: 16px; flex-wrap: wrap; }
+      .stat {
+        background: #fff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        padding: 12px 18px;
+        min-width: 100px;
+      }
+      .stat-label { font-size: 11px; color: #596579; font-weight: 600; text-transform: uppercase; }
+      .stat-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+      .section-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: #596579;
+        margin: 0 0 12px;
+      }
+      .jobs-table-wrap {
+        background: #fff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border-bottom: 1px solid #e7ebf2; font-size: 13px; padding: 10px 14px; text-align: left; }
+      th { background: #f9fafc; color: #596579; font-size: 11px; text-transform: uppercase; font-weight: 600; }
+      tr:last-child td { border-bottom: 0; }
+      a { color: #315c9f; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .empty { color: #596579; font-size: 13px; padding: 12px 0; }
+      .tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 4px;
+        background: #e8edf5;
+        color: #234f8c;
+      }
+      .tag.running { background: #fef3c7; color: #92400e; }
+      .tag.ok { background: #dcfce7; color: #166534; }
+    </style>
+  </head>
+  <body>
+    {% set page_title = "工作台" %}
+    {% include "admin/_header.html" %}
+    <main>
+
+      <!-- 三步流程 -->
+      <div>
+        <p class="section-label">工作流</p>
+        <div class="step-grid">
+
+          <!-- Step 1 -->
+          <div class="step">
+            <div>
+              <div class="step-label">Phase 1</div>
+              <p class="step-title">① 爬取网页</p>
+            </div>
+            <form method="post" action="/admin/quick-crawl" style="display:grid;gap:10px;">
+              <div class="field">
+                <label>种子 URL（每行一个）</label>
+                <textarea name="urls_text" placeholder="https://example.com/math-lesson
+https://example.com/another-page"></textarea>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>任务名称（可选）</label>
+                  <input type="text" name="job_name" placeholder="例：智慧教育初中数学">
+                </div>
+                <button type="submit">开始爬取 →</button>
+              </div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#596579;cursor:pointer;">
+                <input type="checkbox" name="discover_links" value="true" checked style="width:auto;">
+                自动发现并抓取同域子链接
+              </label>
+            </form>
+            <p class="hint">爬取完成后文档存入本地，不调用 AI。勾选后会递归抓取页面内所有同域链接。</p>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="step">
+            <div>
+              <div class="step-label">Phase 2</div>
+              <p class="step-title">② AI 提取</p>
+            </div>
+            <div>
+              <div class="step-count {% if pending_extraction_count > 0 %}warn{% else %}ok{% endif %}">
+                {{ pending_extraction_count }}
+              </div>
+              <p class="hint" style="margin-top:4px;">篇文档待提取</p>
+            </div>
+            <form method="post" action="/admin/extract-pending" style="display:grid;gap:10px;">
+              <div class="field">
+                <label>抽取模式</label>
+                <select name="extractor_mode">
+                  <option value="auto">自动（按配置）</option>
+                  <option value="rule">规则（快速，不调 AI）</option>
+                  <option value="ai">AI（DeepSeek）</option>
+                </select>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label>批次上限</label>
+                  <input type="number" name="limit" value="100" min="1" max="1000">
+                </div>
+                <button type="submit" {% if pending_extraction_count == 0 %}style="opacity:.5"{% endif %}>
+                  开始提取 →
+                </button>
+              </div>
+            </form>
+            <p class="hint">读取本地文件，调用 AI 分析教学方法。</p>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="step">
+            <div>
+              <div class="step-label">Phase 3</div>
+              <p class="step-title">③ 复核结果</p>
+            </div>
+            <div>
+              <div class="step-count {% if pending_review_count > 0 %}warn{% else %}ok{% endif %}">
+                {{ pending_review_count }}
+              </div>
+              <p class="hint" style="margin-top:4px;">项待复核</p>
+            </div>
+            <a class="btn-link" href="/admin/review">进入复核队列 →</a>
+            <p class="hint">审核 AI 提取的教学方法，确认入库。</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 数据统计 -->
+      <div>
+        <p class="section-label">数据概览</p>
+        <div class="stats-row">
+          {% for label, value in stats.items() %}
+            <div class="stat">
+              <div class="stat-label">{{ label }}</div>
+              <div class="stat-value">{{ value }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 活动任务 -->
+      <div>
+        <p class="section-label">活动爬取任务 <a href="/admin/crawl-jobs" style="font-size:12px;margin-left:8px;">查看全部 →</a></p>
+        {% if active_jobs %}
+          <div class="jobs-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>任务名称</th>
+                  <th>状态</th>
+                  <th>总计</th>
+                  <th>完成</th>
+                  <th>失败</th>
+                  <th>阻塞</th>
+                  <th>创建时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for job in active_jobs %}
+                  <tr>
+                    <td><a href="/admin/crawl-jobs/{{ job.id }}">{{ job.name }}</a></td>
+                    <td>
+                      {% if job.status == "运行中" %}
+                        <span class="tag running">{{ job.status }}</span>
+                      {% elif job.status == "完成" %}
+                        <span class="tag ok">{{ job.status }}</span>
+                      {% else %}
+                        <span class="tag">{{ job.status }}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ job.total }}</td>
+                    <td>{{ job.succeeded }}</td>
+                    <td>{{ job.failed }}</td>
+                    <td>{{ job.blocked }}</td>
+                    <td>{{ job.created }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="empty">暂无活动任务。在 Phase 1 输入 URL 开始第一次爬取。</p>
+        {% endif %}
+      </div>
+
+    </main>
+  </body>
+</html>

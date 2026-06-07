@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>爬取任务 - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid #d9dee8;
+        display: flex;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      .table-wrap {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 1040px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
+        font-size: 14px;
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f9fafc;
+        color: #596579;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .actions form {
+        display: inline;
+      }
+
+      button,
+      select {
+        border-radius: 6px;
+        font: inherit;
+      }
+
+      button {
+        background: #234f8c;
+        border: 0;
+        color: #ffffff;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 8px 10px;
+      }
+
+      button.secondary {
+        background: #6b7280;
+      }
+
+      button.danger {
+        background: #9f2d2d;
+      }
+
+      select {
+        border: 1px solid #cbd3df;
+        color: #1d2433;
+        padding: 7px 8px;
+      }
+
+      .empty {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        color: #596579;
+        padding: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    {% set page_title = "爬取任务" %}
+    {% include "admin/_header.html" %}
+    <main>
+      {% if jobs %}
+        <section class="table-wrap" aria-label="爬取任务">
+          <table>
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>状态</th>
+                <th>抽取模式</th>
+                <th>总数</th>
+                <th>等待</th>
+                <th>运行</th>
+                <th>完成</th>
+                <th>失败</th>
+                <th>阻塞</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for job in jobs %}
+                <tr data-job-id="{{ job.id }}">
+                  <td data-field="name"><a href="/admin/crawl-jobs/{{ job.id }}">{{ job.name }}</a></td>
+                  <td data-field="status">{{ job.status }}</td>
+                  <td data-field="extractor_mode_label">{{ job.extractor_mode_label }}</td>
+                  <td data-field="total">{{ job.total }}</td>
+                  <td data-field="pending">{{ job.pending }}</td>
+                  <td data-field="running">{{ job.running }}</td>
+                  <td data-field="succeeded">{{ job.succeeded }}</td>
+                  <td data-field="failed">{{ job.failed }}</td>
+                  <td data-field="blocked">{{ job.blocked }}</td>
+                  <td data-field="created">{{ job.created }}</td>
+                  <td>
+                    <div class="actions">
+                      {% if job.can_run %}
+                        <form method="post" action="/admin/crawl-jobs/{{ job.id }}/run">
+                          <button type="submit">▶ 运行</button>
+                        </form>
+                      {% endif %}
+                      {% if job.can_stop %}
+                        <form method="post" action="/admin/crawl-jobs/{{ job.id }}/stop">
+                          <button class="secondary" type="submit">暂停</button>
+                        </form>
+                      {% endif %}
+                      {% if job.can_cancel %}
+                        <form method="post" action="/admin/crawl-jobs/{{ job.id }}/cancel">
+                          <button class="danger" type="submit">取消</button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      {% else %}
+        <section class="empty">暂无爬取任务。</section>
+      {% endif %}
+    </main>
+    <script>
+      const listActiveStatuses = new Set(["pending", "running"]);
+      let listRefreshTimer = null;
+
+      function setCellText(row, field, value) {
+        const cell = row.querySelector(`[data-field="${field}"]`);
+        if (cell) {
+          cell.textContent = value ?? "-";
+        }
+      }
+
+      async function refreshCrawlJobs() {
+        try {
+          const response = await fetch("/admin/crawl-jobs/status", { cache: "no-store" });
+          if (!response.ok) {
+            return;
+          }
+          const data = await response.json();
+          const rows = document.querySelectorAll("[data-job-id]");
+          if (rows.length !== data.jobs.length) {
+            window.location.reload();
+            return;
+          }
+          for (const job of data.jobs) {
+            const row = document.querySelector(`[data-job-id="${job.id}"]`);
+            if (!row) {
+              window.location.reload();
+              return;
+            }
+            const nameLink = row.querySelector('[data-field="name"] a');
+            if (nameLink) {
+              nameLink.textContent = job.name;
+            }
+            for (const field of [
+              "status",
+              "extractor_mode_label",
+              "total",
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "blocked",
+              "created",
+            ]) {
+              setCellText(row, field, job[field]);
+            }
+          }
+          if (!data.jobs.some((job) => listActiveStatuses.has(job.raw_status))) {
+            window.clearInterval(listRefreshTimer);
+          }
+        } catch {
+          return;
+        }
+      }
+
+      if (document.querySelector("[data-job-id]")) {
+        listRefreshTimer = window.setInterval(refreshCrawlJobs, 2500);
+        refreshCrawlJobs();
+      }
+    </script>
+  </body>
+</html>

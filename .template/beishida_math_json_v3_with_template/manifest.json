@@ -1,0 +1,99 @@
+{
+  "dataset_name": "北师大版初中数学知识结构拆分数据",
+  "version": "v3_author_date_and_version_info",
+  "json_author": "ChatGPT（GPT-5.5 Thinking）",
+  "updated_date": "2026-06-02",
+  "generated_files": [
+    "G7A_七年级上册.json",
+    "G7B_七年级下册.json",
+    "G8A_八年级上册.json",
+    "G8B_八年级下册.json",
+    "G9A_九年级上册.json",
+    "G9B_九年级下册.json"
+  ],
+  "shared_id_policy": {
+    "skill_catalog": "全局共享，编号一致",
+    "skill_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12",
+      "S13",
+      "S14",
+      "S15",
+      "S16"
+    ],
+    "chapter_section_ids": "学期前缀隔离，例如 G7A-C1、G8B-C4-S2"
+  },
+  "textbook_version_summary": {
+    "G7A": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "七年级上册",
+      "edition_label": "2024秋版",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "revision_status": "新课标修订教材",
+      "rollout_status": "已进入新课标修订教材滚动使用序列",
+      "confidence": "high",
+      "note": "用于区分：2022 是课程标准版本；2024秋是该册教材投入使用/标称版本。"
+    },
+    "G7B": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "七年级下册",
+      "edition_label": "2025春版",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "revision_status": "新课标修订教材",
+      "rollout_status": "已进入新课标修订教材滚动使用序列",
+      "confidence": "high",
+      "note": "用于区分：2022 是课程标准版本；2025春是该册教材投入使用/标称版本。"
+    },
+    "G8A": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "八年级上册",
+      "edition_label": "2025秋版",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "revision_status": "新课标修订教材",
+      "rollout_status": "已进入新课标修订教材滚动使用序列",
+      "confidence": "high",
+      "note": "用于区分：2022 是课程标准版本；2025秋是该册教材投入使用/标称版本。"
+    },
+    "G8B": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "八年级下册",
+      "edition_label": "2026春版",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "revision_status": "新课标修订教材",
+      "rollout_status": "按七年级起始年级滚动替换节奏进入新课标修订教材序列；具体以学校实际用书封面/版权页为准",
+      "confidence": "medium",
+      "note": "用于区分：2022 是课程标准版本；2026春是该册教材投入使用/标称版本。"
+    },
+    "G9A": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "九年级上册",
+      "edition_label": "现行公开目录版",
+      "curriculum_standard_basis": "当前文件按可公开核验的北师大版九年级上册目录结构整理；新课标修订版是否已在所在地区实际使用需以当地学校用书为准",
+      "revision_status": "暂不标为2022课标滚动新版",
+      "rollout_status": "如果按2024秋七年级起始年级滚动替换，新课标修订教材通常会先覆盖七、八年级，再进入九年级",
+      "confidence": "medium",
+      "note": "为避免误标，本文件不写成“2025秋版新教材”。后续拿到封面/版权页后可精确修正。"
+    },
+    "G9B": {
+      "textbook_series": "北师大版初中数学（六三制）",
+      "book_label": "九年级下册",
+      "edition_label": "现行公开目录版",
+      "curriculum_standard_basis": "当前文件按可公开核验的北师大版九年级下册目录结构整理；新课标修订版是否已在所在地区实际使用需以当地学校用书为准",
+      "revision_status": "暂不标为2022课标滚动新版",
+      "rollout_status": "如果按2024秋七年级起始年级滚动替换，新课标修订教材通常会先覆盖七、八年级，再进入九年级",
+      "confidence": "medium",
+      "note": "为避免误标，本文件不写成“2026春版新教材”。后续拿到封面/版权页后可精确修正。"
+    }
+  },
+  "note": "六个 JSON 文件均可独立使用；每个文件都包含共享技能目录、该学期版本信息、编号策略和相关跨学期依赖链接。"
+}
