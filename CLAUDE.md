@@ -50,7 +50,7 @@ Each phase is independently re-runnable. `pipeline_status` on `source_documents`
 | `/admin/documents` | All crawled documents |
 | `/admin/techniques` | Teaching methods knowledge base |
 | `/admin/review` | Pending review queue |
-| `/admin/command` | Advanced: create jobs via natural language |
+| `/admin/agent` | Agent: create crawl jobs via natural-language objective (AI-planned, decisions logged) |
 
 ## Crawl Job Modes
 

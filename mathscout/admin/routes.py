@@ -139,8 +139,8 @@ def dashboard(request: Request, session: AdminSession):
     )
 
 
-@router.get("/command")
-def command_center(request: Request, session: AdminSession):
+@router.get("/agent")
+def agent_console(request: Request, session: AdminSession):
     commands = [
         {
             "id": str(command.id),
@@ -172,7 +172,7 @@ def command_center(request: Request, session: AdminSession):
     ]
     return templates.TemplateResponse(
         request=request,
-        name="admin/command.html",
+        name="admin/agent.html",
         context={
             "commands": commands,
             "decisions": decisions,
@@ -184,8 +184,8 @@ def command_center(request: Request, session: AdminSession):
     )
 
 
-@router.post("/command")
-def submit_command(
+@router.post("/agent")
+def submit_agent_command(
     request: Request,
     background_tasks: BackgroundTasks,
     session: AdminSession,
@@ -199,7 +199,7 @@ def submit_command(
 ):
     objective = objective.strip()
     if not objective:
-        return _redirect("/admin/command")
+        return _redirect("/admin/agent")
 
     max_seed_urls = max(1, min(max_seed_urls, 50))
     discovery_max_links = max(1, min(discovery_max_links, 50))
@@ -285,7 +285,7 @@ def submit_command(
         background_tasks.add_task(_run_crawl_job_background, str(job.id), extractor_mode)
     if job is not None:
         return _redirect(f"/admin/crawl-jobs/{job.id}")
-    return _redirect("/admin/command")
+    return _redirect("/admin/agent")
 
 
 @router.get("/decisions")
@@ -739,146 +739,6 @@ def change_log(request: Request, session: AdminSession):
         columns=["目标", "动作", "编辑者", "可回滚", "创建时间"],
         rows=rows,
     )
-
-
-@router.get("/agent")
-def agent_console(request: Request, session: AdminSession):
-    commands = [
-        {
-            "id": str(command.id),
-            "session_id": _display(command.session_id),
-            "raw_text": command.raw_text,
-            "interpreted_intent": _display(command.interpreted_intent),
-            "status": _display(command.status),
-            "created": _display(command.created_at),
-            "error": _display(command.error),
-        }
-        for command in session.scalars(
-            select(NaturalLanguageCommand)
-            .order_by(NaturalLanguageCommand.created_at.desc())
-            .limit(40)
-        ).all()
-    ]
-    decisions = [
-        {
-            "type": _display(decision.decision_type),
-            "target": _display(decision.target_type),
-            "rationale": decision.rationale,
-            "confidence": f"{decision.confidence:.2f}",
-            "auto": "是" if decision.auto_executed else "否",
-            "created": _display(decision.created_at),
-        }
-        for decision in session.scalars(
-            select(AgentDecision).order_by(AgentDecision.created_at.desc()).limit(25)
-        ).all()
-    ]
-    return templates.TemplateResponse(
-        request=request,
-        name="admin/agent.html",
-        context={
-            "commands": commands,
-            "decisions": decisions,
-            "defaults": {
-                "objective": (
-                    "优先爬取公开官方来源和公开教研资源，围绕初中数学教材章节，"
-                    "收集教师解题方法、教学讲法、易错提醒和课堂变体。"
-                ),
-                "extractor_mode": "auto",
-                "max_seed_urls": 8,
-                "discovery_max_links": 12,
-                "discover_links": True,
-                "auto_start": True,
-            },
-        },
-    )
-
-
-@router.get("/agent/messages")
-def agent_messages(session: AdminSession):
-    messages = [
-        {
-            "id": str(command.id),
-            "raw_text": command.raw_text,
-            "interpreted_intent": _display(command.interpreted_intent),
-            "status": _display(command.status),
-            "created": _display(command.created_at),
-            "error": _display(command.error),
-        }
-        for command in session.scalars(
-            select(NaturalLanguageCommand)
-            .order_by(NaturalLanguageCommand.created_at.desc())
-            .limit(40)
-        ).all()
-    ]
-    decisions = [
-        {
-            "type": _display(decision.decision_type),
-            "target": _display(decision.target_type),
-            "rationale": decision.rationale,
-            "confidence": f"{decision.confidence:.2f}",
-            "auto": "是" if decision.auto_executed else "否",
-            "created": _display(decision.created_at),
-        }
-        for decision in session.scalars(
-            select(AgentDecision).order_by(AgentDecision.created_at.desc()).limit(25)
-        ).all()
-    ]
-    return {"messages": messages, "decisions": decisions, "pending_review": _review_count(session)}
-
-
-@router.post("/agent/messages")
-def submit_agent_message(
-    background_tasks: BackgroundTasks,
-    session: AdminSession,
-    objective: str = Form(...),
-    seed_urls: str = Form(""),
-    extractor_mode: str = Form("auto"),
-    max_seed_urls: int = Form(8),
-    discovery_max_links: int = Form(12),
-    discover_links: bool = Form(True),
-    auto_start: bool = Form(True),
-):
-    objective = objective.strip()
-    if not objective:
-        raise HTTPException(status_code=400, detail="请输入目标。")
-
-    max_seed_urls = max(1, min(max_seed_urls, 50))
-    discovery_max_links = max(1, min(discovery_max_links, 50))
-    urls, source_mode = _resolve_crawl_urls(session, objective, seed_urls, max_seed_urls)
-    if not urls:
-        raise HTTPException(status_code=400, detail="No enabled public source URLs found.")
-
-    source_filter = {
-        "urls": urls,
-        "objective": objective,
-        "extractor_mode": extractor_mode,
-        "discover_links": discover_links,
-        "discovery_max_links": discovery_max_links,
-        "source_mode": source_mode,
-        "auto_start": auto_start,
-    }
-    command = NaturalLanguageCommand(
-        raw_text=objective,
-        interpreted_intent=_interpret_command(objective, urls, extractor_mode),
-        structured_directive=source_filter,
-        status=OrchestrationStatus.active,
-        created_by="admin-agent",
-    )
-    session.add(command)
-    session.flush()
-
-    job = _create_crawl_job(
-        session=session,
-        name=_job_name(objective),
-        urls=urls,
-        source_filter=source_filter,
-        task_type="discover_links" if discover_links else "crawl_url",
-    )
-    session.commit()
-
-    if auto_start:
-        background_tasks.add_task(_run_crawl_job_background, str(job.id))
-    return {"ok": True, "job_id": str(job.id), "command_id": str(command.id)}
 
 
 def _execute_orchestration_plan(

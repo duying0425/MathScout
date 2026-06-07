@@ -1,8 +1,39 @@
 # Development Status
 
-Last updated: 2026-06-07.
+Last updated: 2026-06-08.
 
-## 本次更新（中文，2026-06-07）
+## 本次更新（中文，2026-06-08）
+
+针对「后台界面交互逻辑混乱」的反馈，按三阶段流水线重新组织了 admin 导航与入口：
+
+- **合并重复的 AI 指令入口**：`/admin/command`（结构化表单 + 指令/决策记录表格，
+  通过 `AIOrchestratorAgent` 完整编排创建爬取任务）与 `/admin/agent`（聊天式
+  UI，但模板引用的 `messages` / `jobs` 字段与路由实际返回的 `commands` /
+  `decisions` 不匹配，初始页面与轮询接口均无法正常渲染——是个半成品/已损坏
+  页面）功能高度重叠。删除了损坏的聊天界面路由（`agent_console` 旧版、
+  `agent_messages`、`submit_agent_message`）与模板，将原 `/admin/command`
+  路由与模板重命名为 `/admin/agent`，统一为「智能爬取 (Agent)」单一入口，
+  归入 Phase 1。
+- **顶部导航改为按阶段分组的二级结构**（`_header.html`）：一级导航为
+  控制台 / Phase 1·爬取 / Phase 2·提取 / Phase 3·复核入库；二级子导航按
+  所属阶段列出具体页面——爬取任务 / 智能爬取(Agent) / 来源站点 归入 Phase 1，
+  已抓文档归入 Phase 2，复核队列 / 方法库 / 知识库 / 决策记录 / 变更记录
+  归入 Phase 3——并根据当前路径前缀自动高亮所属阶段与子页面（含任务详情页
+  这类带动态 ID 的路径）。
+- **清理各模板重复/冲突的 `header`/`nav`/`.logo` 样式**：此前多数模板各自
+  定义了一份不含 `.admin-brand`/`.admin-page-title`/`.admin-nav` 的通用
+  `header{}` 规则，导致 `_header.html` 渲染出的导航在不同页面上样式不一致
+  （部分页面的导航链接完全没有激活态高亮）；现统一改为引用
+  `_shared_styles.html` 中的 `.admin-header`/`.admin-nav`/`.admin-subnav`，
+  并新增二级子导航的样式定义。
+
+已起本地开发服务器逐页验证全部 10 个后台路径（控制台、智能爬取、爬取任务、
+任务详情、已抓文档、复核队列、方法库、知识库、来源站点、决策记录、变更记录）
+均正常渲染（HTTP 200），导航分组归属与激活态高亮均符合预期；旧路径
+`/admin/command` 已确认返回 404（已整体迁移，无需兼容重定向，因为是纯内部
+后台工具且无外部书签依赖）。同时同步更新了 `CLAUDE.md` 中的页面路径文档。
+
+## 此前更新（中文，2026-06-07）
 
 针对此前移植但未接通的功能与流水线缺口，完成并验证了以下三项开发：
 
@@ -57,6 +88,8 @@ Implemented:
 - 失败任务指数退避重试调度（`CrawlTask.not_before`）
 - 失败 / 需登录文档的「重新抓取」入口（`/admin/documents`）
 - crawling link discovery from seed pages（`discover_links=true` 深度抓取）
+- 后台导航按三阶段分组的二级结构（`/admin/agent` 统一 AI 指令入口，
+  归并自此前重复且部分损坏的 `/admin/command` + 聊天式 `/admin/agent`）
 
 Not implemented yet:
 
@@ -174,3 +207,18 @@ SQLite smoke test also passed:
 4. Wire `RobotsChecker` and per-domain crawl delays into `CrawlJobRunner`.
 5. Add Playwright fetcher and cookie profile storage for login-gated sources.
 6. Replace rule-based reconciliation with AI-assisted reconciliation using the existing candidate tables.
+7. Phase 2（提取）目前在二级导航中只挂了「已抓文档」一个页面——若后续需要
+   单独查看「正在/待提取」批次历史或抽取日志，可以为 Phase 2 新增一个
+   专属的提取记录页面，而不是只靠 `/admin/documents` 的 `pipeline_status` 列。
+8. 二级子导航在窄屏（如移动端）下会换行堆叠，尚未做折叠/汉堡菜单适配；
+   如果后台需要在小屏幕上使用，建议补充响应式收纳。
+
+## 待确认事项（Open Questions）
+
+- **`/admin/command` 旧路径是否需要兼容重定向**：本次直接将其迁移为
+  `/admin/agent`（确认无外部书签/脚本依赖该路径，纯内部工具）。如果发现
+  有自动化脚本或文档外链仍指向 `/admin/command`，需要补一条
+  `RedirectResponse("/admin/agent")`。
+- **「智能爬取 (Agent)」这个二级导航命名是否合适**：用于承载原
+  `/admin/command` 的自然语言指令编排功能，如果团队内部已有更通用的叫法
+  （如「AI 编排」「指令中心」），可以再调整 `_header.html` 中的 label 文案。

@@ -12,26 +12,7 @@
         color: #1d2433;
       }
       body { margin: 0; }
-      header {
-        background: #ffffff;
-        border-bottom: 1px solid #d9dee8;
-        display: flex;
-        align-items: center;
-        gap: 0;
-        padding: 0 24px;
-        height: 52px;
-      }
-      .logo { font-weight: 700; font-size: 16px; color: #1d2433; text-decoration: none; margin-right: 24px; }
-      nav { display: flex; gap: 2px; }
-      nav a {
-        color: #596579;
-        text-decoration: none;
-        font-size: 14px;
-        padding: 6px 12px;
-        border-radius: 6px;
-      }
-      nav a:hover { background: #f0f2f5; color: #1d2433; }
-      nav a.active { background: #e8edf5; color: #234f8c; font-weight: 600; }
+{% include "admin/_shared_styles.html" %}
       main { padding: 28px 24px; display: grid; gap: 20px; max-width: 1100px; }
       h2 { margin: 0 0 14px; font-size: 15px; color: #1d2433; }
       .step-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }

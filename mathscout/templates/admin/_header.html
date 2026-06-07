@@ -1,18 +1,57 @@
 {% set current_path = request.url.path if request is defined else "" %}
 {% set heading = page_title|default(title|default("后台")) %}
+{% set is_dashboard = (current_path == "/admin" or current_path == "/admin/") %}
+{% set nav_groups = [
+  {
+    "key": "phase1",
+    "label": "Phase 1 · 爬取",
+    "pages": [
+      {"label": "爬取任务", "href": "/admin/crawl-jobs"},
+      {"label": "智能爬取 (Agent)", "href": "/admin/agent"},
+      {"label": "来源站点", "href": "/admin/sources"},
+    ],
+  },
+  {
+    "key": "phase2",
+    "label": "Phase 2 · 提取",
+    "pages": [
+      {"label": "已抓文档", "href": "/admin/documents"},
+    ],
+  },
+  {
+    "key": "phase3",
+    "label": "Phase 3 · 复核入库",
+    "pages": [
+      {"label": "复核队列", "href": "/admin/review"},
+      {"label": "方法库", "href": "/admin/techniques"},
+      {"label": "知识库", "href": "/admin/knowledge"},
+      {"label": "决策记录", "href": "/admin/decisions"},
+      {"label": "变更记录", "href": "/admin/changes"},
+    ],
+  },
+] %}
+{% set ns = namespace(active_group=none) %}
+{% for group in nav_groups %}
+  {% for page in group.pages %}
+    {% if ns.active_group is none and current_path.startswith(page.href) %}
+      {% set ns.active_group = group %}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
 <header class="admin-header">
   <a class="admin-brand" href="/admin">MathScout</a>
   <h1 class="admin-page-title">{{ heading }}</h1>
-  <nav class="admin-nav" aria-label="后台导航">
-    <a class="{{ 'active' if current_path == '/admin' or current_path == '/admin/' else '' }}" href="/admin">控制台</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/agent') else '' }}" href="/admin/agent">Agent</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/crawl-jobs') else '' }}" href="/admin/crawl-jobs">任务</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/review') else '' }}" href="/admin/review">复核</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/documents') else '' }}" href="/admin/documents">文档</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/techniques') else '' }}" href="/admin/techniques">方法库</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/knowledge') else '' }}" href="/admin/knowledge">知识</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/sources') else '' }}" href="/admin/sources">来源</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/decisions') else '' }}" href="/admin/decisions">决策</a>
-    <a class="{{ 'active' if current_path.startswith('/admin/changes') else '' }}" href="/admin/changes">变更</a>
+  <nav class="admin-nav" aria-label="阶段导航">
+    <a class="{{ 'active' if is_dashboard else '' }}" href="/admin">控制台</a>
+    {% for group in nav_groups %}
+      <a class="{{ 'active' if ns.active_group and ns.active_group.key == group.key else '' }}" href="{{ group.pages[0].href }}">{{ group.label }}</a>
+    {% endfor %}
   </nav>
 </header>
+{% if ns.active_group %}
+  <nav class="admin-subnav" aria-label="{{ ns.active_group.label }} 子页面">
+    {% for page in ns.active_group.pages %}
+      <a class="{{ 'active' if current_path.startswith(page.href) else '' }}" href="{{ page.href }}">{{ page.label }}</a>
+    {% endfor %}
+  </nav>
+{% endif %}

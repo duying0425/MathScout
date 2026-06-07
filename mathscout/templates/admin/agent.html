@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Agent - MathScout 后台</title>
+    <title>智能爬取 · Agent - MathScout 后台</title>
     <style>
       :root {
         color-scheme: light;
@@ -20,94 +20,50 @@
 
       main {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 320px;
-        min-height: calc(100vh - 74px);
+        gap: 22px;
+        padding: 24px;
       }
 
-      .conversation {
-        display: grid;
-        grid-template-rows: minmax(0, 1fr) auto;
-        min-width: 0;
+      h1,
+      h2 {
+        margin: 0;
       }
 
-      .messages {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        overflow-y: auto;
-        padding: 18px 24px;
+      h1 {
+        font-size: 20px;
       }
 
-      .message {
+      h2 {
+        font-size: 16px;
+      }
+
+      a {
+        color: #315c9f;
+        text-decoration: none;
+      }
+
+      form.command-form {
+        background: #ffffff;
         border: 1px solid #d9dee8;
         border-radius: 8px;
         display: grid;
-        gap: 6px;
-        max-width: min(860px, 100%);
-        padding: 12px 14px;
+        gap: 14px;
+        max-width: 980px;
+        padding: 16px;
       }
 
-      .message.user {
-        align-self: flex-end;
-        background: #234f8c;
-        border-color: #234f8c;
-        color: #ffffff;
-      }
-
-      .message.agent {
-        align-self: flex-start;
-        background: #ffffff;
-      }
-
-      .message.tool {
-        align-self: flex-start;
-        background: #f7faf8;
-        border-color: #cbdccf;
-      }
-
-      .message-head {
-        align-items: baseline;
-        display: flex;
-        gap: 8px;
-        justify-content: space-between;
-      }
-
-      .message-title {
-        font-size: 13px;
-        font-weight: 800;
-      }
-
-      .message-meta {
-        color: #6b7280;
-        font-size: 12px;
-      }
-
-      .message.user .message-meta {
-        color: #dce7f8;
-      }
-
-      .message-body {
-        font-size: 14px;
-        line-height: 1.6;
-        overflow-wrap: anywhere;
-        white-space: pre-wrap;
-      }
-
-      .message a {
-        color: inherit;
-        font-weight: 800;
-      }
-
-      .composer {
-        background: #ffffff;
-        border-top: 1px solid #d9dee8;
+      label {
+        color: #596579;
         display: grid;
-        gap: 10px;
-        padding: 14px 24px 18px;
+        font-size: 12px;
+        font-weight: 700;
+        gap: 6px;
+        text-transform: uppercase;
       }
 
-      .composer textarea,
-      .composer input {
+      textarea,
+      input,
+      select {
         border: 1px solid #cbd3df;
         border-radius: 6px;
         color: #1d2433;
@@ -115,23 +71,25 @@
         padding: 10px 12px;
       }
 
-      .composer textarea {
-        min-height: 96px;
+      textarea {
+        min-height: 88px;
         resize: vertical;
       }
 
-      label {
-        color: #596579;
+      .row {
         display: grid;
-        font-size: 12px;
-        font-weight: 750;
-        gap: 5px;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       }
 
-      .submit-row {
+      .check-row {
         align-items: center;
         display: flex;
-        gap: 10px;
+        gap: 8px;
+      }
+
+      .check-row label {
+        display: inline;
       }
 
       button {
@@ -141,235 +99,170 @@
         color: #ffffff;
         cursor: pointer;
         font: inherit;
-        font-weight: 800;
+        font-weight: 700;
+        justify-self: start;
         padding: 10px 14px;
       }
 
-      button:disabled {
-        background: #8793a5;
-        cursor: wait;
+      .section {
+        display: grid;
+        gap: 10px;
+        max-width: 1120px;
       }
 
-      .submit-state {
-        color: #596579;
-        font-size: 13px;
-      }
-
-      .sidebar {
+      .table-wrap {
         background: #ffffff;
-        border-left: 1px solid #d9dee8;
-        display: grid;
-        align-content: start;
-        gap: 14px;
-        padding: 18px;
-      }
-
-      .sidebar h2 {
-        font-size: 15px;
-        margin: 0;
-      }
-
-      .job-list {
-        display: grid;
-        gap: 8px;
-      }
-
-      .job-row {
         border: 1px solid #d9dee8;
         border-radius: 8px;
-        display: grid;
-        gap: 6px;
-        padding: 10px;
+        overflow-x: auto;
       }
 
-      .job-row a {
-        color: #1d3f73;
+      table {
+        border-collapse: collapse;
+        min-width: 820px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e7ebf2;
         font-size: 14px;
-        font-weight: 800;
-        overflow-wrap: anywhere;
-        text-decoration: none;
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
       }
 
-      .job-meta {
+      th {
+        background: #f9fafc;
         color: #596579;
         font-size: 12px;
-        line-height: 1.5;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
       }
 
       .empty {
+        background: #ffffff;
         border: 1px solid #d9dee8;
         border-radius: 8px;
         color: #596579;
-        padding: 12px;
-      }
-
-      @media (max-width: 980px) {
-        main {
-          grid-template-columns: 1fr;
-        }
-
-        .sidebar {
-          border-left: 0;
-          border-top: 1px solid #d9dee8;
-        }
+        padding: 18px;
       }
     </style>
   </head>
   <body>
-    {% set page_title = "Agent" %}
+    {% set page_title = "智能爬取 · Agent" %}
     {% include "admin/_header.html" %}
     <main>
-      <section class="conversation" aria-label="Agent 对话">
-        <div class="messages" id="messages">
-          {% for message in messages %}
-            <article class="message {{ message.kind }}">
-              <div class="message-head">
-                <span class="message-title">{{ message.title }}</span>
-                <span class="message-meta">{{ message.meta }}</span>
-              </div>
-              <div class="message-body">
-                {% if message.href %}
-                  <a href="{{ message.href }}">{{ message.body }}</a>
-                {% else %}
-                  {{ message.body }}
-                {% endif %}
-              </div>
-            </article>
-          {% else %}
-            <section class="empty">暂无对话。</section>
-          {% endfor %}
-        </div>
-
-        <form class="composer" id="agent-form">
+      <p class="hint" style="margin:0;color:#596579;font-size:13px;">
+        用一句话描述目标，AI 会规划种子 URL、创建并可选自动启动 Phase 1 爬取任务，过程中的每个决策都会记录在下方“最近决策”中，便于追溯与复核。
+      </p>
+      <form class="command-form" method="post" action="/admin/agent">
+        <label>
+          目标
+          <textarea name="objective" required>{{ default_objective }}</textarea>
+        </label>
+        <label>
+          种子 URL
+          <textarea name="seed_urls"></textarea>
+        </label>
+        <div class="row">
           <label>
-            目标
-            <textarea name="objective" required>{{ defaults.objective }}</textarea>
+            Phase 2 抽取模式
+            <select name="extractor_mode" title="爬取（Phase 1）不调用 AI。此参数仅影响后续 Phase 2 提取。">
+              <option value="auto" selected>自动（按配置）</option>
+              <option value="rule">规则（快速，不调 AI）</option>
+              <option value="ai">AI（DeepSeek）</option>
+            </select>
           </label>
-          <input name="seed_urls" type="hidden" value="">
-          <input name="extractor_mode" type="hidden" value="{{ defaults.extractor_mode }}">
-          <input name="max_seed_urls" type="hidden" value="{{ defaults.max_seed_urls }}">
-          <input name="discovery_max_links" type="hidden" value="{{ defaults.discovery_max_links }}">
-          <input name="discover_links" type="hidden" value="{{ 'true' if defaults.discover_links else 'false' }}">
-          <input name="auto_start" type="hidden" value="{{ 'true' if defaults.auto_start else 'false' }}">
-          <div class="submit-row">
-            <button type="submit">发送</button>
-            <span class="submit-state" id="submit-state"></span>
+          <label>
+            最大种子数
+            <input name="max_seed_urls" type="number" min="1" max="50" value="8">
+          </label>
+          <label>
+            每个种子扩展链接数
+            <input name="discovery_max_links" type="number" min="1" max="50" value="12">
+          </label>
+        </div>
+        <div class="check-row">
+          <input id="discover_links" name="discover_links" type="checkbox" value="true" checked>
+          <label for="discover_links">AI 自动发现链接</label>
+        </div>
+        <div class="check-row">
+          <input id="auto_start" name="auto_start" type="checkbox" value="true" checked>
+          <label for="auto_start">创建后立即启动</label>
+        </div>
+        <button type="submit">创建计划</button>
+      </form>
+
+      <section class="section" aria-label="指令记录">
+        <h2>指令记录</h2>
+        {% if commands %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>指令</th>
+                  <th>解释</th>
+                  <th>状态</th>
+                  <th>创建时间</th>
+                  <th>错误</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for command in commands %}
+                  <tr>
+                    <td>{{ command.raw_text }}</td>
+                    <td>{{ command.interpreted_intent }}</td>
+                    <td>{{ command.status }}</td>
+                    <td>{{ command.created }}</td>
+                    <td>{{ command.error }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
-        </form>
+        {% else %}
+          <section class="empty">暂无指令。</section>
+        {% endif %}
       </section>
 
-      <aside class="sidebar" aria-label="最近任务">
-        <h2>最近任务</h2>
-        <div class="job-list" id="jobs">
-          {% for job in jobs %}
-            <div class="job-row">
-              <a href="/admin/crawl-jobs/{{ job.id }}">{{ job.name }}</a>
-              <div class="job-meta">
-                {{ job.status }} · 完成 {{ job.succeeded }}/{{ job.total }} · 失败 {{ job.failed }} · 阻塞 {{ job.blocked }}
-              </div>
-            </div>
-          {% else %}
-            <section class="empty">暂无任务。</section>
-          {% endfor %}
-        </div>
-      </aside>
+      <section class="section" aria-label="最近决策">
+        <h2>最近决策</h2>
+        {% if decisions %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>类型</th>
+                  <th>目标</th>
+                  <th>理由</th>
+                  <th>置信度</th>
+                  <th>自动执行</th>
+                  <th>创建时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for decision in decisions %}
+                  <tr>
+                    <td>{{ decision.type }}</td>
+                    <td>{{ decision.target }}</td>
+                    <td>{{ decision.rationale }}</td>
+                    <td>{{ decision.confidence }}</td>
+                    <td>{{ decision.auto }}</td>
+                    <td>{{ decision.created }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <section class="empty">暂无决策。</section>
+        {% endif %}
+      </section>
     </main>
-
-    <script>
-      const form = document.getElementById("agent-form");
-      const messagesEl = document.getElementById("messages");
-      const jobsEl = document.getElementById("jobs");
-      const submitState = document.getElementById("submit-state");
-
-      function renderMessages(messages) {
-        messagesEl.innerHTML = "";
-        if (!messages.length) {
-          messagesEl.innerHTML = '<section class="empty">暂无对话。</section>';
-          return;
-        }
-        for (const message of messages) {
-          const article = document.createElement("article");
-          article.className = `message ${message.kind}`;
-          const head = document.createElement("div");
-          head.className = "message-head";
-          const title = document.createElement("span");
-          title.className = "message-title";
-          title.textContent = message.title;
-          const meta = document.createElement("span");
-          meta.className = "message-meta";
-          meta.textContent = message.meta;
-          head.append(title, meta);
-          const body = document.createElement("div");
-          body.className = "message-body";
-          if (message.href) {
-            const link = document.createElement("a");
-            link.href = message.href;
-            link.textContent = message.body;
-            body.append(link);
-          } else {
-            body.textContent = message.body;
-          }
-          article.append(head, body);
-          messagesEl.append(article);
-        }
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      }
-
-      function renderJobs(jobs) {
-        jobsEl.innerHTML = "";
-        if (!jobs.length) {
-          jobsEl.innerHTML = '<section class="empty">暂无任务。</section>';
-          return;
-        }
-        for (const job of jobs) {
-          const row = document.createElement("div");
-          row.className = "job-row";
-          const link = document.createElement("a");
-          link.href = `/admin/crawl-jobs/${job.id}`;
-          link.textContent = job.name;
-          const meta = document.createElement("div");
-          meta.className = "job-meta";
-          meta.textContent = `${job.status} · 完成 ${job.succeeded}/${job.total} · 失败 ${job.failed} · 阻塞 ${job.blocked}`;
-          row.append(link, meta);
-          jobsEl.append(row);
-        }
-      }
-
-      async function refreshAgentMessages() {
-        const response = await fetch("/admin/agent/messages", { cache: "no-store" });
-        if (!response.ok) {
-          return;
-        }
-        const data = await response.json();
-        renderMessages(data.messages || []);
-        renderJobs(data.jobs || []);
-      }
-
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const button = form.querySelector("button");
-        button.disabled = true;
-        submitState.textContent = "发送中";
-        try {
-          const response = await fetch("/admin/agent/messages", {
-            method: "POST",
-            body: new FormData(form),
-          });
-          if (!response.ok) {
-            submitState.textContent = "失败";
-            return;
-          }
-          const data = await response.json();
-          renderMessages(data.messages || []);
-          renderJobs(data.jobs || []);
-          submitState.textContent = "已发送";
-        } finally {
-          button.disabled = false;
-        }
-      });
-
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-      window.setInterval(refreshAgentMessages, 3000);
-    </script>
   </body>
 </html>
