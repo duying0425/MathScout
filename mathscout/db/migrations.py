@@ -8,6 +8,7 @@ from mathscout.db.base import Base
 def ensure_database_schema(engine: Engine) -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_crawl_task_not_before(engine)
+    _ensure_source_document_pipeline_fields(engine)
     _ensure_source_document_document_kind(engine)
 
 
@@ -34,6 +35,26 @@ def _ensure_source_document_document_kind(engine: Engine) -> None:
         connection.execute(
             text("ALTER TABLE source_documents ADD COLUMN document_kind VARCHAR(32)")
         )
+
+
+def _ensure_source_document_pipeline_fields(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if not inspector.has_table("source_documents"):
+        return
+    columns = {column["name"] for column in inspector.get_columns("source_documents")}
+    with engine.begin() as connection:
+        if "pipeline_status" not in columns:
+            connection.execute(
+                text("ALTER TABLE source_documents ADD COLUMN pipeline_status VARCHAR(32)")
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_source_documents_pipeline_status "
+                    "ON source_documents (pipeline_status)"
+                )
+            )
+        if "pipeline_error" not in columns:
+            connection.execute(text("ALTER TABLE source_documents ADD COLUMN pipeline_error TEXT"))
 
 
 def _add_not_before_ddl(dialect_name: str) -> str:
