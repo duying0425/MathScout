@@ -49,6 +49,7 @@ class PipelineStatus(StrEnum):
     done = "done"                  # Phase 3 done: reconciled into knowledge base
     failed = "failed"              # Any phase failed
     login_required = "login_required"  # Blocked by login wall
+    needs_ocr = "needs_ocr"        # 扫描件/图片，待 OCR（未配置 Azure 文档智能时）
 
 
 class ReviewStatus(StrEnum):

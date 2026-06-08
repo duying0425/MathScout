@@ -62,6 +62,7 @@ DISPLAY_TEXT = {
     "needs_edit": "需编辑",
     "public": "公开",
     "login_required": "需登录",
+    "needs_ocr": "待 OCR",
     "paid_or_restricted": "付费/受限",
     "unknown": "未知",
     "create_task": "创建/规划",
@@ -462,7 +463,14 @@ def crawl_job_detail(job_id: str, request: Request, session: AdminSession):
     documents = _documents_for_ids(session, document_ids)
     candidate_count = _count_for_documents(session, CandidateKnowledgeItem, document_ids)
 
-    pipeline_counts: dict[str, int] = {"crawled": 0, "extracted": 0, "done": 0, "failed": 0, "login_required": 0}
+    pipeline_counts: dict[str, int] = {
+        "crawled": 0,
+        "extracted": 0,
+        "done": 0,
+        "failed": 0,
+        "login_required": 0,
+        "needs_ocr": 0,
+    }
     for doc in documents:
         key = doc.pipeline_status.value if doc.pipeline_status else "crawled"
         pipeline_counts[key] = pipeline_counts.get(key, 0) + 1
@@ -589,7 +597,8 @@ def documents(request: Request, session: AdminSession):
             "抓取时间": _display(document.fetched_at),
             "_actions": (
                 [{"label": "重新抓取", "url": f"/admin/documents/{document.id}/retry"}]
-                if document.pipeline_status in {PipelineStatus.failed, PipelineStatus.login_required}
+                if document.pipeline_status
+                in {PipelineStatus.failed, PipelineStatus.login_required, PipelineStatus.needs_ocr}
                 else []
             ),
         }
@@ -621,8 +630,12 @@ def retry_document(
     document = session.get(SourceDocument, parsed_id)
     if document is None:
         raise HTTPException(status_code=404, detail="未找到该文档。")
-    if document.pipeline_status not in {PipelineStatus.failed, PipelineStatus.login_required}:
-        raise HTTPException(status_code=400, detail="仅可重新抓取失败或需登录的文档。")
+    if document.pipeline_status not in {
+        PipelineStatus.failed,
+        PipelineStatus.login_required,
+        PipelineStatus.needs_ocr,
+    }:
+        raise HTTPException(status_code=400, detail="仅可重新抓取失败、需登录或待 OCR 的文档。")
 
     name = f"重新抓取 {datetime.utcnow().strftime('%m-%d %H:%M')}"
     result = CrawlJobRunner(session).create_job(name, [document.url], discover_links=False)
@@ -1064,6 +1077,7 @@ def _display_pipeline_status(value: Any) -> str:
         "done": "已入库",
         "failed": "提取失败",
         "login_required": "需登录",
+        "needs_ocr": "待 OCR（扫描件/图片）",
     }.get(str(value), str(value))
 
 

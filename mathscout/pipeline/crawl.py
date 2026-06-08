@@ -17,17 +17,13 @@ from mathscout.db.models import (
     SourceDocument,
     SourceSite,
 )
-from mathscout.parsers.html import html_to_text
-from mathscout.parsers.pdf import pdf_to_text
+from mathscout.parsers.convert import (
+    DocumentConverter,
+    MarkItDownNotInstalledError,
+    OcrNotConfiguredError,
+)
+from mathscout.parsers.detect import DocumentKind, detect_document_kind
 
-UNSUPPORTED_CONTENT_TYPE_PREFIXES = ("image/", "audio/", "video/", "font/")
-UNSUPPORTED_CONTENT_TYPES = {
-    "application/octet-stream",
-    "application/zip",
-    "application/x-7z-compressed",
-    "application/x-rar-compressed",
-    "application/x-zip-compressed",
-}
 EMPTY_TEXT_MIN_CHARS = 40
 BOILERPLATE_TEXT_MAX_CHARS = 240
 BOILERPLATE_MARKERS = (
@@ -43,7 +39,7 @@ BOILERPLATE_MARKERS = (
 
 
 class CrawlPipeline:
-    """Phase 1: 抓取 URL，解析文本，写入本地文件，更新 source_documents 表。
+    """Phase 1: 抓取 URL，识别类型并转换为文本/Markdown，写入本地文件，更新 source_documents。
 
     终点是 pipeline_status='crawled'，不调用 AI，不做 reconciliation。
     Phase 2 由 ExtractPipeline 负责，可随时独立触发。
@@ -53,30 +49,21 @@ class CrawlPipeline:
         self.session = session
         self.settings = get_settings()
         self.fetcher = HttpFetcher()
+        self.converter = DocumentConverter(self.settings)
 
     def fetch_and_store(self, url: str) -> dict[str, object]:
-        """抓取单个 URL，存文件，返回基本元数据。不做 AI 提取。"""
+        """抓取单个 URL，识别类型、转换、存文件，返回基本元数据。不做 AI 提取。"""
         result = asyncio.run(self.fetcher.fetch(url))
         site = self._get_or_create_site(result.url)
-        text = self._parse_content(result.raw_path, result.content_type)
-        text_path = self._write_text(result.checksum, text)
 
-        ct = (result.content_type or "").lower()
         if result.needs_login:
-            pipeline_status = PipelineStatus.login_required
-            pipeline_error = None
-        elif any(ct.startswith(prefix) for prefix in UNSUPPORTED_CONTENT_TYPE_PREFIXES) or ct in UNSUPPORTED_CONTENT_TYPES:
-            pipeline_status = PipelineStatus.failed
-            pipeline_error = "unsupported content type"
-        elif len(text) < EMPTY_TEXT_MIN_CHARS:
-            pipeline_status = PipelineStatus.failed
-            pipeline_error = "empty or boilerplate page"
-        elif any(marker in text[:BOILERPLATE_TEXT_MAX_CHARS].lower() for marker in BOILERPLATE_MARKERS):
-            pipeline_status = PipelineStatus.failed
-            pipeline_error = "empty or boilerplate page"
+            text, kind, converter = "", DocumentKind.unknown, ""
+            pipeline_status, pipeline_error = PipelineStatus.login_required, None
         else:
-            pipeline_status = PipelineStatus.crawled
-            pipeline_error = None
+            kind = detect_document_kind(result.raw_path, result.content_type, result.url)
+            text, pipeline_status, pipeline_error, converter = self._convert(result.raw_path, kind)
+
+        text_path = self._write_text(result.checksum, text)
         document = self._upsert_document(
             site=site,
             url=url,
@@ -97,9 +84,33 @@ class CrawlPipeline:
             "document_id": str(document.id),
             "pipeline_status": pipeline_status.value,
             "content_type": result.content_type or "",
+            "document_kind": kind.value,
+            "converter": converter,
             "text_length": len(text),
             "raw_path": str(result.raw_path),
         }
+
+    def _convert(
+        self, raw_path: Path, kind: DocumentKind
+    ) -> tuple[str, PipelineStatus, str | None, str]:
+        """按识别出的类型转换内容，返回（文本, 流水线状态, 错误信息, 转换器名）。"""
+        try:
+            conv = self.converter.convert(raw_path, kind)
+        except OcrNotConfiguredError as exc:
+            return "", PipelineStatus.needs_ocr, str(exc), ""
+        except MarkItDownNotInstalledError as exc:
+            return "", PipelineStatus.failed, str(exc), ""
+        except ValueError:
+            return "", PipelineStatus.failed, f"不支持的内容类型：{kind.value}", ""
+        except Exception as exc:  # noqa: BLE001 - 任何转换异常都降级为失败并记录
+            return "", PipelineStatus.failed, f"转换失败：{exc}", ""
+
+        text = conv.text
+        if len(text) < EMPTY_TEXT_MIN_CHARS or any(
+            marker in text[:BOILERPLATE_TEXT_MAX_CHARS].lower() for marker in BOILERPLATE_MARKERS
+        ):
+            return text, PipelineStatus.failed, "页面为空或仅样板内容", conv.converter
+        return text, PipelineStatus.crawled, None, conv.converter
 
     def _get_or_create_site(self, url: str) -> SourceSite:
         parsed = urlparse(url)
@@ -118,18 +129,8 @@ class CrawlPipeline:
         self.session.flush()
         return site
 
-    def _parse_content(self, raw_path: Path, content_type: str | None) -> str:
-        ct = (content_type or "").lower()
-        if "pdf" in ct or raw_path.suffix.lower() == ".pdf":
-            return pdf_to_text(raw_path)
-        raw_bytes = raw_path.read_bytes()
-        html = raw_bytes.decode("utf-8", errors="ignore")
-        if "html" in ct or raw_path.suffix.lower() in {".html", ".htm"}:
-            return html_to_text(html)
-        return html
-
     def _write_text(self, checksum: str, text: str) -> Path:
-        text_path = self.settings.text_storage_dir / f"{checksum}.txt"
+        text_path = self.settings.text_storage_dir / f"{checksum}.md"
         text_path.write_text(text, encoding="utf-8")
         return text_path
 

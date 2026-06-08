@@ -54,14 +54,43 @@ class HttpFetcher:
 
     @staticmethod
     def _suffix_from_content_type(content_type: str | None) -> str:
+        """据 Content-Type 给原始文件一个合理后缀，便于后续类型识别与 markitdown 选择转换器。
+
+        识别仍以文件 magic 字节为准，这里只是尽量给出有用的扩展名提示。
+        """
         if not content_type:
             return ".bin"
-        if "pdf" in content_type:
+        ct = content_type.lower()
+        if "pdf" in ct:
             return ".pdf"
-        if "html" in content_type:
+        if "html" in ct:
             return ".html"
-        if "json" in content_type:
+        if "json" in ct:
             return ".json"
+        if "wordprocessingml" in ct:
+            return ".docx"
+        if "msword" in ct:
+            return ".doc"
+        if "presentationml" in ct:
+            return ".pptx"
+        if "powerpoint" in ct:
+            return ".ppt"
+        if "spreadsheetml" in ct:
+            return ".xlsx"
+        if "ms-excel" in ct:
+            return ".xls"
+        if "image/jpeg" in ct:
+            return ".jpg"
+        if "image/png" in ct:
+            return ".png"
+        if "image/gif" in ct:
+            return ".gif"
+        if "image/webp" in ct:
+            return ".webp"
+        if "image/tiff" in ct:
+            return ".tif"
+        if ct.startswith("image/"):
+            return ".img"
         return ".bin"
 
     @staticmethod

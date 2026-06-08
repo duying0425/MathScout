@@ -20,6 +20,7 @@ Each phase is independently re-runnable. `pipeline_status` on `source_documents`
 - **FastAPI + Jinja2** — server-rendered admin UI at `/admin`
 - **SQLAlchemy + SQLite** — ORM, no Alembic (manual `ALTER TABLE` for migrations)
 - **DeepSeek** — AI extraction in Phase 2
+- **markitdown** — unified document → Markdown conversion (Office, scanned PDF/image OCR via Azure Document Intelligence). Type detection + conversion live in `mathscout/parsers/{detect,convert,attachments}.py`. See `docs/ingestion.md`. Lazy-imported, so HTML/digital-PDF paths work without it.
 
 ## Dev Server
 
@@ -61,5 +62,5 @@ Each phase is independently re-runnable. `pipeline_status` on `source_documents`
 
 - All DB timestamps stored as naive UTC; display converts to UTC+8 via `_display()` in routes.py.
 - `cards` variable removed from dashboard route — was dead code.
-- `pipeline_status` enum: `crawled | extracted | done | failed | login_required`
+- `pipeline_status` enum: `crawled | extracted | done | failed | login_required | needs_ocr` (`needs_ocr` = scanned PDF/image awaiting OCR when Azure Document Intelligence is not configured)
 - Scrapling `Response.body` always returns `bytes`; no need for `isinstance(raw, str)` check.

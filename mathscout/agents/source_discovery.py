@@ -8,6 +8,7 @@ from scrapling.fetchers import AsyncFetcher
 from scrapling.parser import Adaptor
 
 from mathscout.agents.base import AgentResult, AgentStatus
+from mathscout.parsers.attachments import is_attachment_url
 
 POSITIVE_KEYWORDS = {
     "初中": 8,
@@ -457,6 +458,10 @@ def score_link(url: str, label: str, objective: str) -> tuple[float, list[str]]:
     if path.endswith(".pdf"):
         score += 5
         reasons.append("format:pdf")
+    if is_attachment_url(url):
+        # 课件/教案/学案等附件是高价值教学资源，适当加分。
+        score += 8
+        reasons.append("format:附件")
     if any(marker in path for marker in ["/lesson", "/course", "/resource", "/jiaoan"]):
         score += 4
         reasons.append("path:教学资源路径")

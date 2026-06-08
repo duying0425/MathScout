@@ -9,6 +9,7 @@ dependencies = [
   "fastapi>=0.115",
   "scrapling[fetchers]>=0.4",
   "jinja2>=3.1",
+  "markitdown[docx,pptx,xlsx]>=0.1",
   "orjson>=3.10",
   "pydantic>=2.8",
   "pydantic-settings>=2.4",
@@ -28,6 +29,11 @@ dev = [
   "mypy>=1.10",
   "pytest>=8.2",
   "ruff>=0.5"
+]
+# 扫描版 PDF / 图片的 OCR：经 markitdown 调用 Azure 文档智能。
+# 需配置 AZURE_DOC_INTEL_ENDPOINT（及可选 AZURE_DOC_INTEL_KEY）。
+ocr = [
+  "markitdown[az-doc-intel]>=0.1"
 ]
 
 [project.scripts]

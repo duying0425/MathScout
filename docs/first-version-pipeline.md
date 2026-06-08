@@ -2,10 +2,15 @@
 
 流水线分为三个相互独立的阶段，每个阶段都可单独重跑，无需重跑其他阶段。
 
-## Phase 1 — 爬取（只做网络 I/O，不调用 AI）
+## Phase 1 — 爬取（网络 I/O + 文档转换，不调用 LLM）
 
-抓取 URL，把原始文件存到磁盘，在 `source_documents` 记录元数据。成功后将
-`pipeline_status` 置为 `'crawled'`。
+抓取 URL，把原始文件存到磁盘，在 `source_documents` 记录元数据。抓取后由摄取层做
+**文档类型识别 + 转换**：HTML→trafilatura、数字版 PDF→PyMuPDF、Office→markitdown，
+转成 Markdown 存到 `.data/text/<checksum>.md`。成功后将 `pipeline_status` 置为
+`'crawled'`；扫描版 PDF/图片在未配置 Azure 文档智能时置为 `'needs_ocr'`。
+详见 [ingestion.md](ingestion.md)。
+
+> 注：此阶段的"AI"仅指扫描件/图片的 Azure OCR（可选）；教学方法的 LLM 抽取在 Phase 2。
 
 ```powershell
 # 单个 URL

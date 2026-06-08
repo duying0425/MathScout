@@ -12,7 +12,11 @@
 | 教材结构导入（`.template`）| ✅ | 系列 / 册 / 章 / 节 / 知识点 / 学生能力 |
 | 单 URL 与持久化爬取作业 | ✅ | 支持暂停 / 续跑 / 取消 |
 | 深度抓取（同域、同路径前缀链接发现）| ✅ | 基于关键词规则打分，非 LLM |
-| HTML / PDF 解析 | ✅ | trafilatura + BeautifulSoup / PyMuPDF |
+| HTML / 数字版 PDF 解析 | ✅ | trafilatura / PyMuPDF |
+| 文档类型识别（magic/Content-Type/扩展名 + PDF 文字层探测）| ✅ | 见 [ingestion.md](ingestion.md) |
+| Office（docx/pptx/xlsx）→ Markdown | ✅ | 经 markitdown |
+| 附件下载（课件/教案/学案，发现阶段识别入队）| ✅ | `DOWNLOAD_ATTACHMENTS` 开关 |
+| 扫描版 PDF / 图片 OCR | 🚧 | 经 markitdown 调 Azure 文档智能，配置开关；未配置标记 needs_ocr |
 | Schema 约束的方法抽取（DeepSeek）| ✅ | 失败回退规则抽取器 |
 | 候选项 → 主知识库的规则调和 | ✅ | 按语义键判断 创建 / 变体 / 跳过 |
 | 失败任务指数退避重试 | ✅ | `CrawlTask.not_before` |
@@ -202,9 +206,13 @@ MathScout 的**愿景**是 AI 主导的编排模式：
 
 ### Parsers（解析器）
 
+抓取后由统一的**摄取/转换层**处理（见 [ingestion.md](ingestion.md)）：先做文档类型
+识别，再按类型选最擅长的工具转成 Markdown。
+
 - HTML：trafilatura 优先，BeautifulSoup 兜底。✅
-- PDF：PyMuPDF 文本抽取，OCR 兜底待后续。✅（OCR 📋）
-- DOCX/PPTX：按需后加。📋
+- 数字版 PDF：PyMuPDF 文本抽取。✅
+- 扫描版 PDF / 图片：经 markitdown 调 Azure 文档智能 OCR。🚧（配置开关；未配置标记 needs_ocr）
+- DOCX/PPTX/XLSX：经 markitdown 转 Markdown。✅
 - 视频：先存元数据；仅在有字幕或合法转录时做转写。📋
 
 ### Extractors（抽取器）

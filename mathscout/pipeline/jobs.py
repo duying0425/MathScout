@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from mathscout.agents.base import AgentStatus
 from mathscout.agents.source_discovery import SourceDiscoveryAgent
+from mathscout.config import get_settings
 from mathscout.db.models import (
     AgentDecision,
     AgentDecisionType,
@@ -18,6 +19,7 @@ from mathscout.db.models import (
     CrawlStatus,
     CrawlTask,
 )
+from mathscout.parsers.attachments import is_attachment_url
 from mathscout.pipeline.crawl import CrawlPipeline
 
 
@@ -28,6 +30,7 @@ class CrawlJobRunner:
 
     def __init__(self, session: Session) -> None:
         self.session = session
+        self.settings = get_settings()
 
     def create_job(self, name: str, urls: list[str], discover_links: bool = False) -> dict[str, str | int]:
         job = CrawlJob(
@@ -362,9 +365,14 @@ class CrawlJobRunner:
                 continue
             if parsed.netloc != allowed_domain:
                 continue
-            if path_prefix and not parsed.path.startswith(path_prefix):
-                continue
             clean = parsed._replace(fragment="").geturl()
+            attachment = is_attachment_url(clean)
+            # 附件（课件/教案/学案）不受路径前缀约束——常放在 /uploads、/files 等目录；
+            # 普通页面仍只跟踪种子目录前缀下的链接，避免抓取整站。
+            if attachment and not self.settings.download_attachments:
+                continue
+            if not attachment and path_prefix and not parsed.path.startswith(path_prefix):
+                continue
             if clean in existing_urls:
                 continue
             self.session.add(
@@ -373,7 +381,7 @@ class CrawlJobRunner:
                     url=clean,
                     task_type="crawl_url",
                     status=CrawlStatus.pending,
-                    result_json={"discovered_from": str(source_task.id)},
+                    result_json={"discovered_from": str(source_task.id), "attachment": attachment},
                 )
             )
             existing_urls.add(clean)

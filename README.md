@@ -45,7 +45,10 @@ Phase 3（复核）   → 入库知识库     （pipeline_status = 'done'）
 - **后端 / 后台**：FastAPI + Jinja2 服务端渲染页面。
 - **数据库**：默认 SQLite（本地零依赖）；SQLAlchemy ORM。迁移目前靠手写 `ALTER TABLE`。
 - **抓取**：[Scrapling](https://github.com/D4Vinci/Scrapling) `AsyncFetcher`，自带反爬伪装。
-- **解析**：HTML 用 trafilatura（BeautifulSoup 兜底），PDF 用 PyMuPDF。
+- **文档摄取/转换**：先做类型识别（magic/Content-Type/扩展名 + PDF 文字层探测），再按类型转成
+  Markdown——HTML 用 trafilatura、数字版 PDF 用 PyMuPDF、Office（docx/pptx/xlsx）用
+  [markitdown](https://github.com/microsoft/markitdown)；并能识别并下载页面附件（课件/教案/学案）。
+  详见 [docs/ingestion.md](docs/ingestion.md)。
 - **抽取**：受 schema 约束的 LLM 抽取（DeepSeek / OpenAI 兼容接口），失败时回退规则抽取器。
 - **后台任务**：FastAPI `BackgroundTasks`（在 web 进程内执行）。
 
@@ -150,6 +153,7 @@ mathscout extract-document "<document_id>" --extractor rule
 ## 更多文档
 
 - 总体设计与愿景：[docs/architecture.md](docs/architecture.md)
+- 文档摄取与转换（类型识别 / markitdown / Azure OCR / 附件下载）：[docs/ingestion.md](docs/ingestion.md)
 - 三阶段流水线细节：[docs/first-version-pipeline.md](docs/first-version-pipeline.md)
 - 当前实现状态与待办：[docs/development-status.md](docs/development-status.md)
 - 数据模型：[docs/data-model.md](docs/data-model.md)

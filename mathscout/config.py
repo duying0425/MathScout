@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     )
     ai_max_text_chars: int = Field(default=12000, alias="AI_MAX_TEXT_CHARS")
 
+    # 文档转换 / OCR：扫描版 PDF 与图片走 Azure 文档智能。留空则不启用 OCR，
+    # 相关文档会被标记为 needs_ocr，等待人工处理或后续配置。
+    azure_doc_intel_endpoint: str | None = Field(default=None, alias="AZURE_DOC_INTEL_ENDPOINT")
+    azure_doc_intel_key: str | None = Field(default=None, alias="AZURE_DOC_INTEL_KEY")
+
+    # 附件下载：链接发现阶段识别并入队 PDF/Office 附件（课件/教案/学案常在附件里）。
+    download_attachments: bool = Field(default=True, alias="DOWNLOAD_ATTACHMENTS")
+
     @property
     def ai_api_key(self) -> str | None:
         return self.deepseek_api_key or self.openai_compatible_api_key
