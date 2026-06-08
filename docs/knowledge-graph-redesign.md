@@ -271,9 +271,13 @@ semantic_key = normalize_semantic_key(f"{series.name}:{book.book_code}:{section.
 4. ✅ **调和骨架**（`pipeline/problem_extract.ProblemReconciler`）：候选 → canonical
    题目/解答/配图；题目↔小节软链接、解答↔**既有**技巧链接（匹配不到不新建）；
    题目↔知识点"考察"**不自动写链接、改生成 ReviewItem 入复核**。
-5. 📋 真实抽取器（规则 / AI）：从清洗后的文本/题库产出 `ExtractedProblem`，喂给调和骨架。
-6. 📋 admin：题目库列表 + 题目详情页（渲染题干 / 解法列表 / 考察知识点 / 用到技巧）。
-7. 📋 先用**一个**范围可控的题源打通端到端，质量达标再扩量。
+5. 🚧 真实抽取器：**规则版已实现**（`extraction/problem_rule_based.RuleBasedProblemExtractor`
+   按 例N/题N/解：/解法N/答案 等标记切分题目与解答）+ 便捷入口
+   `pipeline/problem_extract.extract_and_reconcile_problems`（文本→canonical 端到端）；
+   **AI 版待做**（输出同一 `ExtractedProblem` 契约即可替换）。
+6. 📋 摄取层数学内容（LaTeX + 图片 + 可选图片→TikZ）——见 [ingestion.md §5](ingestion.md)。
+7. 📋 admin：题目库列表 + 题目详情页（渲染题干 / 解法列表 / 考察知识点 / 用到技巧）。
+8. 📋 先用**一个**范围可控的题源打通端到端，质量达标再扩量。
 
 ## 7. 已定的决策
 

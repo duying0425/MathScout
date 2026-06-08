@@ -26,6 +26,7 @@ from mathscout.db.models import (
     SourceDocument,
     TeachingMethod,
 )
+from mathscout.extraction.problem_rule_based import RuleBasedProblemExtractor
 from mathscout.extraction.schemas import ExtractedFigure, ExtractedProblem, ExtractedSolution
 from mathscout.utils.text import normalize_semantic_key
 
@@ -373,3 +374,17 @@ class ProblemReconciler:
             )
         )
         self.session.flush()
+
+
+def extract_and_reconcile_problems(
+    session: Session,
+    document: SourceDocument,
+    text: str,
+    settings: Settings | None = None,
+) -> dict[str, int]:
+    """便捷入口：规则抽取 + 调和——清洗文本 → canonical 题目/解答/链接。
+
+    AI 抽取器（后续切片）只要产出同一 `ExtractedProblem` 契约即可替换 extractor。
+    """
+    problems = RuleBasedProblemExtractor().extract(text, document.url).problems
+    return ProblemReconciler(session, settings).ingest(problems, document)

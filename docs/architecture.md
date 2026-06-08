@@ -389,9 +389,9 @@ FastAPI/Jinja 页面已经够用。
   `section_knowledge_point_links`；`semantic_key` 改基于内容。北师大 6 册 425→417 canonical。
 - **Phase B — 技巧/解答概念澄清 + 事实层 schema** ✅：抽取 prompt 明确"解答 ≠ 技巧"；
   建出 `problems` / `solutions` / `figures` + 3 张链接表（空表、外键自洽）；`teaching_methods` 不动。
-- **Phase C — 题目 + 解答** 🚧：抽取契约（`ExtractedProblem`/`ExtractedSolution`）+ 调和
-  骨架（`ProblemReconciler`：候选→canonical，KP 考察入复核）已实现；待做：真实抽取器、
-  摄取层 LaTeX + 图片 + 可选图片→TikZ、题目库 UI。高风险，**先小范围试点**。
+- **Phase C — 题目 + 解答** 🚧：抽取契约 + 调和骨架（`ProblemReconciler`）+ **规则版抽取器**
+  （`RuleBasedProblemExtractor` + `extract_and_reconcile_problems` 文本→canonical 端到端）已实现；
+  待做：AI 抽取器、摄取层 LaTeX + 图片 + 可选图片→TikZ、题目库 UI。高风险，**先小范围试点**。
 
 ## 11. 待定决策
 
