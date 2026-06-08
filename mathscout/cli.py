@@ -98,7 +98,7 @@ def main() -> None:
     # ── 路由 ────────────────────────────────────────────────────────────
     if args.command == "init-db":
         create_database_schema()
-        print("database schema created")
+        print("数据库表已创建")
         return
 
     if args.command == "import-template":
@@ -126,7 +126,7 @@ def main() -> None:
                 result = runner.create_job_from_file(args.name, args.urls_file)
             else:
                 if not args.url:
-                    raise ValueError("Provide at least one --url or --urls-file.")
+                    raise ValueError("请至少提供一个 --url，或使用 --urls-file 指定 URL 列表文件。")
                 result = runner.create_job(args.name, list(args.url))
         print(result)
         return

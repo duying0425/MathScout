@@ -1,30 +1,28 @@
-# First Version Pipeline
+# 首版流水线（First Version Pipeline）
 
-The pipeline is split into three independent phases. Each phase can be re-run
-without rerunning the others.
+流水线分为三个相互独立的阶段，每个阶段都可单独重跑，无需重跑其他阶段。
 
-## Phase 1 — Crawl (network I/O only, no AI)
+## Phase 1 — 爬取（只做网络 I/O，不调用 AI）
 
-Fetches URLs, saves raw files to disk, records metadata in `source_documents`.
-Sets `pipeline_status = 'crawled'` on success.
+抓取 URL，把原始文件存到磁盘，在 `source_documents` 记录元数据。成功后将
+`pipeline_status` 置为 `'crawled'`。
 
 ```powershell
-# Single URL
+# 单个 URL
 mathscout crawl-url "https://example.com/math-lesson"
 
-# Via job (supports deep crawl with discover_links=true)
+# 通过作业（支持 discover_links=true 的深度抓取）
 mathscout create-job --name "batch" --url "https://example.com/a" --url "https://example.com/b"
 mathscout run-job "<job_id>"
 ```
 
-### Deep Crawl Mode
-When a job is created with `discover_links=true` (checkbox in the dashboard),
-after each page is fetched the crawler extracts all same-domain links under the
-same URL path prefix as the seed URLs, and adds them as new tasks. This prevents
-crawling the entire site.
+### 深度抓取模式
 
-Example: seed `https://site.com/math/junior/index.html` → only follows links
-under `/math/junior/`.
+当作业以 `discover_links=true` 创建（控制台里的复选框）时，每抓完一页，爬虫会提取
+与种子 URL **同域、且 URL 路径前缀相同**的所有链接，作为新任务加入。这样可避免抓取
+整站。
+
+示例：种子 `https://site.com/math/junior/index.html` → 只跟进 `/math/junior/` 下的链接。
 
 ### 失败重试机制（指数退避）
 
@@ -43,24 +41,24 @@ under `/math/junior/`.
 当某篇 `source_documents` 的 `pipeline_status` 为 `failed` 或 `login_required`
 时，`/admin/documents` 列表会出现「重新抓取」按钮（`POST /admin/documents/{document_id}/retry`）。
 点击后会以该文档的 URL 创建一个新的单 URL 抓取作业并在后台立即执行，
-无需手动到「命令中心」重新提交。
+无需手动到「智能爬取 (Agent)」重新提交。
 
-## Phase 2 — Extract (AI or rules)
+## Phase 2 — 提取（AI 或规则）
 
-Reads local text files produced by Phase 1, runs extractors to create
-`CandidateKnowledgeItem` records. Sets `pipeline_status = 'extracted'`.
+读取 Phase 1 产出的本地文本文件，运行抽取器生成 `CandidateKnowledgeItem` 记录。
+之后将 `pipeline_status` 置为 `'extracted'`。
 
 ```powershell
 mathscout extract-pending --limit 100 --extractor auto
 mathscout extract-document "<document_id>" --extractor rule
 ```
 
-Extractor modes: `auto` (follow config), `rule` (fast, no AI), `ai` (DeepSeek).
+抽取模式：`auto`（按配置）、`rule`（快速，不调 AI）、`ai`（DeepSeek）。
 
-## Phase 3 — Review & Reconcile
+## Phase 3 — 复核与调和
 
-Human reviews candidates in `/admin/review`, approves/edits/rejects.
-Approved items become canonical `TeachingMethod` entries.
+人工在 `/admin/review` 复核候选，进行 通过/编辑/拒绝。通过的项成为 canonical 的
+`TeachingMethod` 记录。
 
 ### 复核操作（已接入 ReviewService）
 
@@ -76,12 +74,11 @@ Approved items become canonical `TeachingMethod` entries.
 记录复核理由与操作人，便于追溯。操作非法（如未知 action）时会回滚并
 返回 400 错误提示。
 
-## Admin UI Entry Point
+## 后台 UI 入口
 
-The dashboard at `/admin` shows all three phases as a step-by-step workflow.
-Start from Phase 1 by pasting URLs into the textarea.
+`/admin` 控制台把三个阶段呈现为一个分步工作流。从 Phase 1 开始：把 URL 粘贴进文本框即可。
 
-## DB Initialization (first run only)
+## 数据库初始化（仅首次）
 
 ```powershell
 mathscout init-db

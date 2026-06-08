@@ -1,33 +1,36 @@
-# Crawl Policy
+# 爬取策略（Crawl Policy）
 
-MathScout should crawl slowly, visibly, and with provenance.
+MathScout 应当**慢速、可见、带出处**地爬取。
 
-## Allowed by Default
+## 默认允许
 
-- Public government pages and PDFs.
-- Public school and teaching-research pages.
-- Public publisher catalogue pages.
-- User-uploaded documents that the user has rights to process.
+- 公开的政府页面与 PDF。
+- 公开的学校与教研页面。
+- 公开的出版社目录页。
+- 用户有权处理的、用户自行上传的文档。
 
-## Requires Review
+## 需要复核
 
-- Sites with login.
-- Sites with unclear terms.
-- Public pages that contain obvious commercial copyrighted resources.
-- Video platforms and file-sharing sites.
+- 需要登录的站点。
+- 使用条款不明确的站点。
+- 含有明显商业版权资源的公开页面。
+- 视频平台与文件分享站点。
 
-## Not Supported
+## 不支持
 
-- Captcha bypass.
-- Paywall bypass.
-- DRM bypass.
-- Credential sharing across users or domains.
-- Republishing full copyrighted textbooks, teacher guides, paid course notes, or problem books.
+- 绕过验证码。
+- 绕过付费墙。
+- 绕过 DRM。
+- 跨用户或跨域共享凭据。
+- 转载受版权保护的完整教材、教师用书、付费课程笔记或题集。
 
-## Fetch Rules
+## 抓取规则
 
-- Per-domain rate limit.
-- Robots.txt check where applicable.
-- Content hash deduplication.
-- Store raw content separately from canonical extracted data.
-- Track source URL, fetched time, parser version, extractor version, and review status.
+- 按域限速。
+- 在适用处检查 robots.txt。
+- 基于内容哈希去重。
+- 原始内容与 canonical 抽取数据分开存储。
+- 记录来源 URL、抓取时间、解析器版本、抽取器版本与复核状态。
+
+> **当前实现**：内容哈希去重、原始/抽取分离存储、来源与版本元数据已实现；
+> **按域限速与 robots 检查尚未接入作业执行器**（见 development-status.md 待办）。

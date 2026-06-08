@@ -1,18 +1,21 @@
-# AI Control Plane
+# AI 控制面（AI Control Plane）
 
-MathScout should feel like supervising an AI research operator rather than
-clicking through crawler settings.
+MathScout 的目标体验，是让用户像"监督一个 AI 研究员"，而不是逐项点击爬虫设置。
 
-## User Interaction
+> **当前实现提醒**：本文描述的是目标控制面。当前版本的"AI"编排是**确定性规则**，
+> 尚未接入 LLM 推理；质量监控、自动暂停低产来源、自动续/停等能力为规划。
+> 实现状态见 [development-status.md](development-status.md)。
 
-Users primarily interact through:
+## 用户交互方式
 
-- natural-language commands
-- visual progress and quality dashboards
-- review queues for conflicts and high-impact changes
-- source/login management
+用户主要通过以下方式交互：
 
-Example commands:
+- 自然语言指令
+- 可视化进度与质量看板
+- 针对冲突与高影响变更的复核队列
+- 来源 / 登录管理
+
+指令示例：
 
 ```text
 先集中抓北师大版七年级上册，优先补有理数和一元一次方程的解题技巧。
@@ -27,44 +30,43 @@ Example commands:
 暂停所有需要登录的站点，先完成公开数据覆盖率报告。
 ```
 
-## AI Responsibilities
+## AI 的职责（愿景）
 
-- convert natural language into structured directives
-- plan crawl/extract/reconcile jobs
-- select source priority and crawl depth
-- watch coverage, novelty rate, duplicate rate, conflict rate, and confidence
-- pause low-yield or noisy sources
-- request login/cookies when a source is blocked
-- decide continue, pause, retry, or stop
-- explain every action in an audit log
+- 把自然语言转成结构化指令
+- 规划 爬取 / 提取 / 调和 作业
+- 选择来源优先级与爬取深度
+- 监控覆盖率、新增率、重复率、冲突率与置信度
+- 暂停低产或噪声大的来源
+- 来源被拦截时请求登录 / Cookie
+- 决定 继续、暂停、重试或停止
+- 在审计日志中解释每一个动作
 
-## Human Responsibilities
+## 人工的职责
 
-- set objectives and scope
-- provide access for login-gated sources when appropriate
-- approve risky updates, conflicts, or destructive changes
-- correct strategy when the AI optimizes the wrong target
-- inspect quality reports before using or exporting data
+- 设定目标与范围
+- 在合适时为登录受限来源提供访问凭据
+- 审批有风险的更新、冲突或破坏性变更
+- 当 AI 优化错了目标时纠正策略
+- 在使用或导出数据前检查质量报告
 
-## Hard Guardrails
+## 硬护栏（Hard Guardrails）
 
-The AI can propose and execute normal work, but deterministic policy checks must
-block actions that violate:
+AI 可以提出并执行常规工作，但确定性的策略检查必须拦截违反以下规则的动作：
 
-- access controls
-- domain enable/disable settings
-- rate limits and budgets
-- copyright storage/publishing rules
-- destructive deletion rules
-- conflict publishing rules
+- 访问控制
+- 域名启用/禁用设置
+- 限速与预算
+- 版权存储/发布规则
+- 破坏性删除规则
+- 冲突发布规则
 
-## Minimum UI
+## 最小化 UI
 
-- Command Center: chat-like natural-language control.
-- Current Plan: active goal, scope, budgets, stop conditions, next actions.
-- Agent Decisions: chronological audit log with rationale and policy checks.
-- Quality Monitor: coverage, novelty, duplicate rate, conflicts, source yield.
-- Review Queue: candidate creates/updates/conflicts requiring user decision.
-- Source Access: blocked-login list and cookie profile status.
-- Technique Editor: edit canonical methods, teacher variants, mappings, and lock curated records.
-- Change Log: inspect human edits, AI proposals, before/after payloads, and rollback candidates.
+- **指令中心**：聊天式自然语言控制。
+- **当前计划**：当前目标、范围、预算、停止条件、下一步动作。
+- **Agent 决策**：按时间排列、含理由与策略检查的审计日志。
+- **质量监控**：覆盖率、新增率、重复率、冲突、来源产出。
+- **复核队列**：需要用户决策的候选创建/更新/冲突。
+- **来源访问**：被登录拦截列表与 Cookie 配置状态。
+- **方法编辑器**：编辑 canonical 方法、教师变体、映射，并锁定已整理记录。
+- **变更日志**：查看人工编辑、AI 建议、前后载荷与可回滚候选。

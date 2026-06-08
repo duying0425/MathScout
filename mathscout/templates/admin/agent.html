@@ -158,7 +158,9 @@
     {% include "admin/_header.html" %}
     <main>
       <p class="hint" style="margin:0;color:#596579;font-size:13px;">
-        用一句话描述目标，AI 会规划种子 URL、创建并可选自动启动 Phase 1 爬取任务，过程中的每个决策都会记录在下方“最近决策”中，便于追溯与复核。
+        用一句话描述目标，系统会按规则规划种子 URL 与链接发现、创建并可选自动启动 Phase 1 爬取任务。
+        （此处的规划与链接打分为<strong>规则编排</strong>，暂未接入 LLM 推理；AI 仅在 Phase 2 抽取时按所选模式调用。）
+        过程中的每个决策都会记录在下方“最近决策”中，便于追溯与复核。
       </p>
       <form class="command-form" method="post" action="/admin/agent">
         <label>
@@ -189,7 +191,7 @@
         </div>
         <div class="check-row">
           <input id="discover_links" name="discover_links" type="checkbox" value="true" checked>
-          <label for="discover_links">AI 自动发现链接</label>
+          <label for="discover_links">自动发现链接（按关键词规则打分）</label>
         </div>
         <div class="check-row">
           <input id="auto_start" name="auto_start" type="checkbox" value="true" checked>

@@ -1,8 +1,8 @@
-# Initial Source Notes
+# 初始来源记录（Source Notes）
 
-Checked on 2026-06-04.
+核对时间：2026-06-04。
 
-## Official Baseline Sources
+## 官方基线来源
 
 - 教育部办公厅关于印发《2024年义务教育国家课程教学用书目录（根据2022年版课程标准修订）》的通知  
   https://hudong.moe.gov.cn/srcsite/A26/s8001/202408/t20240805_1144254.html
@@ -16,11 +16,8 @@ Checked on 2026-06-04.
 - 基础教育精品课平台资料  
   https://jpk.basic.smartedu.cn
 
-## Design Implications
+## 对设计的启示
 
-- Textbook rollout is time-sensitive. The app should store edition labels and
-  regional adoption records with validity periods and evidence links.
-- Regional usage should come from provincial/city/district education-bureau
-  notices where possible, not from unsourced "教材版本地区表" posts.
-- Public teaching resources can seed extraction, but canonical records should
-  retain source provenance and review status.
+- 教材换版有时效性。系统应存储版次标签与地区采用记录，并带上有效期与证据链接。
+- 地区使用情况应尽量来自省/市/区教育局的通知，而非无出处的"教材版本地区表"帖子。
+- 公开教学资源可作为抽取的种子，但 canonical 记录应保留来源出处与复核状态。

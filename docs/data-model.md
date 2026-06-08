@@ -1,39 +1,38 @@
-# Data Model Draft
+# 数据模型草案（Data Model）
 
-This document summarizes the normalized schema. SQLAlchemy models live in
-`mathscout/db/models.py`.
+本文概述规范化 schema。SQLAlchemy 模型位于 `mathscout/db/models.py`。
 
-## Canonical Education Tables
+## Canonical 教育表
 
 - `textbook_series`
-  - publisher/version family
-  - school system such as 六三制 or 五四制
-  - curriculum standard basis
+  - 出版社/版本族
+  - 学制，如 六三制 或 五四制
+  - 课程标准依据
 - `books`
-  - grade, semester, edition label
-  - maps to template ids such as `G7A`
+  - 年级、学期、版次标签
+  - 映射到模板 id，如 `G7A`
 - `chapters`
-  - maps to ids such as `G7A-C1`
+  - 映射到 id，如 `G7A-C1`
 - `sections`
-  - maps to ids such as `G7A-C1-S1`
+  - 映射到 id，如 `G7A-C1-S1`
 - `student_skills`
-  - global catalog such as S01-S16
+  - 全局能力表，如 S01–S16
 - `knowledge_points`
-  - canonical knowledge point records
+  - canonical 知识点记录
 - `teaching_methods`
-  - first-class canonical problem-solving techniques
-  - stores shared method identity, method type, summary, common steps, applicable task patterns, prerequisites, and source count
+  - 一等公民的 canonical 解题方法
+  - 存储共性方法标识、方法类型、摘要、通用步骤、适用题型、前置与来源计数
 - `teaching_method_variants`
-  - source-specific teacher versions of a canonical technique
-  - preserves different classroom explanations, step orders, intuitions, warnings, and examples
+  - canonical 方法的、来源特定的教师版本
+  - 保留不同的课堂讲法、步骤顺序、直觉、提醒与例题
 - `method_section_links`
-  - maps techniques to textbook sections, with relation type and confidence
+  - 方法 → 教材小节映射，带关系类型与置信度
 - `method_knowledge_point_links`
-  - maps techniques to knowledge points, with relation type and confidence
+  - 方法 → 知识点映射，带关系类型与置信度
 - `region_adoptions`
-  - evidence-backed textbook usage by region/school
+  - 按地区/学校的、有证据支撑的教材使用记录
 
-## Provenance Tables
+## 出处表（Provenance）
 
 - `source_sites`
 - `source_documents`
@@ -41,70 +40,68 @@ This document summarizes the normalized schema. SQLAlchemy models live in
 - `extraction_runs`
 - `review_items`
 - `manual_edit_logs`
-  - audit trail for every human edit
-  - stores table name, target id, action type, before payload, after payload, reason, editor, and rollback metadata
+  - 每一次人工编辑的审计链
+  - 存储表名、目标 id、动作类型、前载荷、后载荷、理由、操作人与回滚元数据
 
-## Candidate and Reconciliation Tables
+## 候选与调和表
 
 - `candidate_knowledge_items`
-  - one structured candidate extracted from one source document or chunk
-  - stores item type, normalized payload, evidence, confidence, and extraction run
-  - candidates are immutable; corrections create new candidates or review edits
+  - 从单篇来源文档或分块中抽取的一个结构化候选
+  - 存储项类型、规范化载荷、证据、置信度与抽取运行
+  - 候选不可变；更正会生成新候选或复核编辑
 - `reconciliation_decisions`
-  - AI decision for a candidate: `skip`, `update`, `create_variant`, `create`, `conflict`, or `review`
-  - stores matched canonical ids, rationale, confidence, and proposed database patch
-  - provides the audit log for why the knowledge base changed or did not change
+  - 对候选的 AI 决策：`skip`、`update`、`create_variant`、`create`、`conflict` 或 `review`
+  - 存储匹配的 canonical id、理由、置信度与建议的数据库补丁
+  - 提供"知识库为何变化或为何不变"的审计日志
 
-## AI Orchestration Tables
+## AI 编排表
 
 - `orchestration_sessions`
-  - one AI-managed work session created from a human goal
-  - stores current objective, target scope, budget, status, active strategy, and stop conditions
+  - 由人工目标创建的一个 AI 工作会话
+  - 存储当前目标、目标范围、预算、状态、当前策略与停止条件
 - `natural_language_commands`
-  - user instructions entered in the admin command center
-  - stores raw command text, AI interpretation, structured directive, and execution status
+  - 在后台指令中心输入的用户指令
+  - 存储原始指令文本、AI 解读、结构化指令与执行状态
 - `agent_decisions`
-  - audit log for AI decisions such as creating tasks, changing source priority,
-    pausing a source, retrying a failed task, applying a reconciliation result, or stopping a session
-  - every decision should include rationale, input metrics, policy checks, and confidence
+  - AI 决策的审计日志，如创建任务、调整来源优先级、暂停来源、重试失败任务、
+    应用调和结果或停止会话
+  - 每个决策都应包含理由、输入指标、策略检查与置信度
 - `quality_snapshots`
-  - periodic metrics used by the AI orchestrator
-  - includes chapter coverage, source yield, duplicate rate, conflict rate, average confidence,
-    login-blocked count, failure count, budget usage, and novelty trend
+  - 供编排器使用的周期性指标
+  - 含章节覆盖率、来源产出、重复率、冲突率、平均置信度、登录拦截数、失败数、
+    预算使用与新增趋势
 
-## Manual Editing Rules
+> 说明：`region_adoptions` / `quality_snapshots` 等部分表当前"已建表但尚未被读写"，
+> 是为规划功能预留的结构。
 
-- human edits are first-class data, not comments outside the system
-- canonical knowledge points, teaching methods, variants, and mappings can be edited in the admin UI
-- edited records can be marked as human-locked so AI cannot overwrite them automatically
-- AI may still propose updates to human-locked records, but those proposals must enter review
-- merges, splits, deletes, and mapping changes should always write `manual_edit_logs`
-- review approvals should also write edit logs when they modify canonical data
+## 人工编辑规则
 
-## Job Tables
+- 人工编辑是一等公民数据，而非系统外的批注
+- canonical 知识点、教学方法、变体与映射都可在后台编辑
+- 已编辑记录可标记为"人工锁定"，使 AI 不能自动覆盖
+- AI 仍可对人工锁定记录提出更新，但这些建议必须进入复核
+- 合并、拆分、删除与映射变更都应写入 `manual_edit_logs`
+- 当复核审批修改了 canonical 数据时，也应写入编辑日志
+
+## 作业表
 
 - `crawl_jobs`
 - `crawl_tasks`
 
-## Important Relationships
+## 重要关系
 
-- one textbook series has many books
-- one book has many chapters
-- one chapter has many sections
-- one section has many knowledge points
-- teaching methods can link to multiple sections and knowledge points
-- one canonical teaching method can have many teacher/source variants
-- method reconciliation should preserve meaningful variants instead of over-merging
-- every extracted record should link to at least one evidence snippet when possible
-- region adoption records must link to evidence, not just free text
-- crawled extraction output should not write directly into canonical tables
-- new extraction output first becomes a candidate, then the reconciliation agent
-  decides whether to skip, update, create, mark conflict, or request review
-- canonical records should track repeated sightings through evidence/source counts,
-  while candidate records preserve the exact source-backed extraction result
-- humans should mostly interact with `natural_language_commands`, dashboards, and
-  review queues; the AI orchestrator translates direction into structured plans
-- AI execution must be auditable through `agent_decisions` and measurable through
-  `quality_snapshots`
-- human changes must be auditable through `manual_edit_logs`; AI reconciliation
-  should use those logs when deciding whether to skip, update, or request review
+- 一个教材系列有多个册
+- 一个册有多个章
+- 一个章有多个节
+- 一个节有多个知识点
+- 教学方法可链接到多个小节与知识点
+- 一个 canonical 教学方法可有多个教师/来源变体
+- 方法调和应保留有意义的变体，而非过度合并
+- 每条抽取记录应尽量链接到至少一个证据片段
+- 地区采用记录必须链接证据，而非仅凭自由文本
+- 抓取抽取的输出不应直接写入 canonical 表
+- 新抽取输出先成为候选，再由调和环节决定 跳过/更新/创建/标记冲突/请求复核
+- canonical 记录通过证据/来源计数跟踪重复出现，候选记录则保留精确的、有来源支撑的抽取结果
+- 人工主要通过 `natural_language_commands`、看板与复核队列交互；编排器把方向翻译成结构化计划
+- AI 执行必须可通过 `agent_decisions` 审计、可通过 `quality_snapshots` 度量
+- 人工变更必须可通过 `manual_edit_logs` 审计；AI 调和在决定 跳过/更新/请求复核 时应参考这些日志

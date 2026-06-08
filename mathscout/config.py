@@ -10,7 +10,6 @@ class Settings(BaseSettings):
 
     environment: str = Field(default="development", alias="MATHSCOUT_ENV")
     database_url: str = "postgresql+psycopg://mathscout:mathscout@localhost:5432/mathscout"
-    redis_url: str = "redis://localhost:6379/0"
     raw_storage_dir: Path = Path(".data/raw")
     text_storage_dir: Path = Path(".data/text")
     cookie_storage_dir: Path = Path(".data/cookies")

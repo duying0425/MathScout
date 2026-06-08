@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
@@ -205,7 +205,11 @@ def submit_agent_command(
     discovery_max_links = max(1, min(discovery_max_links, 50))
     urls, source_mode = _resolve_crawl_urls(session, objective, seed_urls, max_seed_urls)
     if not urls:
-        raise HTTPException(status_code=400, detail="No enabled public source URLs found.")
+        raise HTTPException(
+            status_code=400,
+            detail="没有可用的公开来源 URL：请在“种子 URL”中粘贴链接，"
+            "或先在“来源站点”里启用公开来源。",
+        )
 
     target_scope = {
         "source_mode": source_mode,
@@ -458,7 +462,6 @@ def crawl_job_detail(job_id: str, request: Request, session: AdminSession):
     documents = _documents_for_ids(session, document_ids)
     candidate_count = _count_for_documents(session, CandidateKnowledgeItem, document_ids)
 
-    from mathscout.db.models import PipelineStatus
     pipeline_counts: dict[str, int] = {"crawled": 0, "extracted": 0, "done": 0, "failed": 0, "login_required": 0}
     for doc in documents:
         key = doc.pipeline_status.value if doc.pipeline_status else "crawled"
@@ -994,7 +997,7 @@ def _infer_textbook_scope(objective: str) -> dict[str, str]:
 
 def _interpret_command(objective: str, urls: list[str], extractor_mode: str) -> str:
     return (
-        f"规划 AI 链接发现，并为 {len(urls)} 个种子 URL 创建受监督爬取任务；"
+        f"按规则规划链接发现，并为 {len(urls)} 个种子 URL 创建受监督爬取任务；"
         f"随后用 {extractor_mode} 模式分析页面并保存候选知识。"
     )
 
@@ -1266,7 +1269,7 @@ def _display(value: Any) -> str:
         return "-"
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value.astimezone(_UTC8).strftime("%Y-%m-%d %H:%M")
     if hasattr(value, "value"):
         raw = str(value.value)
