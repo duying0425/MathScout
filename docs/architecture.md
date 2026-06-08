@@ -25,10 +25,12 @@
 | 多 Agent 编排（15+ Agent）| 📋 | 仅类型契约，无运行实现 |
 | LLM 驱动的调和 / 质量监控 / 自动策略调整 | 📋 | 仅有 schema / 类型定义 |
 | 登录 Cookie 流程（Playwright）| 📋 | 未实现 |
-| robots / 按域限速 | 📋 | 未接入作业执行器 |
+| robots.txt 校验 / 按域限速 | ✅ | 已接入 `CrawlJobRunner`，`RESPECT_ROBOTS` 开关 |
+| 启动重置僵尸 running 作业/任务 | ✅ | `reset_stale_jobs`（main 启动调用）|
+| 候选复核详情页 + 编辑（同步 canonical 方法）| ✅ | `/admin/review/candidates/<id>` |
 | PostgreSQL + Alembic + pgvector | 📋 | 当前仅 SQLite + 手写迁移 |
 | 独立 worker / 并发编排 | 📋 | 当前用 FastAPI `BackgroundTasks` |
-| 人工编辑表单、详情页、检索过滤 | 📋 | 仅有列表页 |
+| 方法库编辑表单、合并/拆分、检索过滤 | 🚧 | 候选已可编辑；canonical 方法的独立编辑/合并仍待补 |
 
 ## 1. 产品范围
 

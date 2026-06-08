@@ -129,7 +129,13 @@
               {% for row in rows %}
                 <tr>
                   <td>{{ row.type }}</td>
-                  <td>{{ row.title }}</td>
+                  <td>
+                    {% if row.kind == "candidate" %}
+                      <a href="/admin/review/candidates/{{ row.id }}">{{ row.title }}</a>
+                    {% else %}
+                      {{ row.title }}
+                    {% endif %}
+                  </td>
                   <td>{{ row.section }}</td>
                   <td>{{ row.summary }}</td>
                   <td>{{ row.confidence }}</td>

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>复核详情 - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+      body { margin: 0; }
+{% include "admin/_shared_styles.html" %}
+      main { padding: 24px; display: grid; gap: 16px; max-width: 960px; }
+      a { color: #315c9f; text-decoration: none; }
+      h2 { font-size: 18px; margin: 0 0 8px; }
+      h3 { font-size: 15px; margin: 0 0 10px; }
+      .card {
+        background: #fff;
+        border: 1px solid #d9dee8;
+        border-radius: 10px;
+        padding: 16px 18px;
+      }
+      .meta, .map { color: #596579; font-size: 13px; margin: 2px 0; }
+      .muted { color: #596579; font-size: 13px; }
+      .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+      .actions form { display: inline; }
+      button {
+        background: #234f8c; border: 0; border-radius: 6px; color: #fff;
+        cursor: pointer; font: inherit; font-weight: 700; padding: 8px 14px;
+      }
+      button.secondary { background: #6b7280; }
+      button.danger { background: #9f2d2d; }
+      .edit-form { display: grid; gap: 10px; }
+      .edit-form label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: #475061; }
+      .edit-form input, .edit-form textarea {
+        border: 1px solid #cbd3df; border-radius: 6px; font: inherit; font-size: 13px;
+        padding: 8px 10px; width: 100%; box-sizing: border-box;
+      }
+      .edit-form textarea { min-height: 70px; resize: vertical; }
+      .edit-form button { justify-self: start; }
+      ul { margin: 4px 0; padding-left: 20px; }
+      li { line-height: 1.7; font-size: 14px; }
+      blockquote {
+        background: #f9fafc; border-left: 3px solid #cbd3df; margin: 8px 0;
+        padding: 8px 12px; font-size: 14px; color: #1d2433;
+      }
+      pre.preview {
+        background: #f9fafc; border: 1px solid #e7ebf2; border-radius: 6px;
+        max-height: 420px; overflow: auto; padding: 12px; white-space: pre-wrap;
+        word-break: break-word; font-size: 13px; line-height: 1.6;
+      }
+      .kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 14px; }
+      .kv dt { color: #596579; }
+      .kv dd { margin: 0; }
+    </style>
+  </head>
+  <body>
+    {% set page_title = "复核详情" %}
+    {% include "admin/_header.html" %}
+    <main>
+      <p style="margin:0;"><a href="/admin/review">← 返回复核队列</a></p>
+
+      <section class="card">
+        <h2>{{ c.title }}</h2>
+        <div class="meta">类型 {{ c.type }} · 置信度 {{ c.confidence }} · 状态 {{ c.status }} · 方法类型 {{ c.method_type }}</div>
+        <div class="map">教材定位：{{ c.book_code }} / {{ c.chapter_title }} / {{ c.section_title }}</div>
+        {% if c.source %}
+          <div class="meta">来源：<a href="{{ c.source.url }}" target="_blank" rel="noreferrer">{{ c.source.url }}</a>（{{ c.source.kind }} · {{ c.source.pipeline_status }}）</div>
+        {% endif %}
+        <div class="actions">
+          <form method="post" action="/admin/review/candidates/{{ c.id }}/approve">
+            <button type="submit">通过并入库</button>
+          </form>
+          <form method="post" action="/admin/review/candidates/{{ c.id }}/needs-edit">
+            <button class="secondary" type="submit">标记需编辑</button>
+          </form>
+          <form method="post" action="/admin/review/candidates/{{ c.id }}/reject">
+            <button class="danger" type="submit">拒绝</button>
+          </form>
+        </div>
+      </section>
+
+      {% if c.decision %}
+      <section class="card">
+        <h3>调和决策</h3>
+        <p style="margin:0 0 6px;">动作：{{ c.decision.action }}{% if c.matched_method %} · 对应方法：<a href="/admin/techniques">{{ c.matched_method.title }}</a>{% endif %}</p>
+        {% if c.decision.rationale %}<p class="muted" style="margin:0;">{{ c.decision.rationale }}</p>{% endif %}
+      </section>
+      {% endif %}
+
+      <section class="card">
+        <h3>编辑后通过</h3>
+        <p class="muted" style="margin:0 0 10px;">编辑会同步更新由该候选生成的教学方法，并记入「变更记录」。保存后可再点上方「通过并入库」。</p>
+        <form method="post" action="/admin/review/candidates/{{ c.id }}/edit" class="edit-form">
+          <label>标题<input name="title" value="{{ c.title }}"></label>
+          <label>方法类型<input name="method_type" value="{{ c.method_type }}"></label>
+          <label>摘要<textarea name="summary">{{ c.summary }}</textarea></label>
+          <label>步骤（每行一条）<textarea name="steps">{{ c.steps_text }}</textarea></label>
+          <label>适用题型（每行一条）<textarea name="applicable_patterns">{{ c.applicable_text }}</textarea></label>
+          <label>常见误区（每行一条）<textarea name="common_misconceptions">{{ c.misconceptions_text }}</textarea></label>
+          <label>修改说明（可选）<input name="reason" placeholder="例：补充第 3 步、修正适用范围"></label>
+          <button type="submit">保存修改</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h3>抽取字段</h3>
+        <dl class="kv">
+          <dt>知识点</dt><dd>{{ c.knowledge_point_titles | join("、") or "-" }}</dd>
+          <dt>前置能力</dt><dd>{{ c.prerequisites | join("、") or "-" }}</dd>
+          <dt>课堂提醒</dt><dd>{{ c.classroom_warnings | join("、") or "-" }}</dd>
+          <dt>例题模式</dt><dd>{{ c.example_patterns | join("、") or "-" }}</dd>
+          <dt>来源教师</dt><dd>{{ c.source_teacher }}</dd>
+          <dt>来源机构</dt><dd>{{ c.source_org }}</dd>
+          <dt>来源地区</dt><dd>{{ c.source_region }}</dd>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h3>证据片段</h3>
+        {% if c.evidence_texts %}
+          {% for e in c.evidence_texts %}<blockquote>{{ e }}</blockquote>{% endfor %}
+        {% else %}
+          <p class="muted" style="margin:0;">无证据片段。</p>
+        {% endif %}
+      </section>
+
+      <section class="card">
+        <h3>源文档预览（Markdown）</h3>
+        {% if c.source_preview %}
+          <pre class="preview">{{ c.source_preview }}</pre>
+        {% else %}
+          <p class="muted" style="margin:0;">无可预览的源文本（文件不存在或为空）。</p>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

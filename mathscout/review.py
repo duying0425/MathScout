@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -116,6 +117,68 @@ class ReviewService:
                 "item_type": item.item_type,
             },
         )
+
+    def edit_candidate(
+        self,
+        candidate_id: str,
+        *,
+        title: str,
+        payload_updates: dict[str, Any],
+        reason: str = "",
+        editor: str = "admin",
+    ) -> CandidateKnowledgeItem:
+        """人工编辑候选字段，并同步到由该候选生成的 canonical 教学方法，写入 ManualEditLog。"""
+        candidate = self._get_candidate(candidate_id)
+        before = self._candidate_edit_payload(candidate)
+
+        if title.strip():
+            candidate.title = title.strip()
+        payload = dict(candidate.payload or {})
+        payload.update(payload_updates)
+        candidate.payload = payload
+
+        method = self._linked_method(candidate)
+        if method is not None:
+            if title.strip():
+                method.title = title.strip()
+            if "summary" in payload_updates:
+                method.summary = payload_updates["summary"]
+            if "method_type" in payload_updates and payload_updates["method_type"]:
+                method.method_type = payload_updates["method_type"]
+            if "steps" in payload_updates:
+                method.steps = payload_updates["steps"]
+
+        log = ManualEditLog(
+            target_table="candidate_knowledge_items",
+            target_id=candidate.id,
+            action=ManualEditAction.update,
+            before_payload=before,
+            after_payload=self._candidate_edit_payload(candidate),
+            reason=reason.strip() or None,
+            editor=editor,
+            can_rollback=False,
+        )
+        self.session.add(log)
+        self.session.flush()
+        return candidate
+
+    def _linked_method(self, candidate: CandidateKnowledgeItem) -> TeachingMethod | None:
+        decision = self.session.scalar(
+            select(ReconciliationDecision).where(
+                ReconciliationDecision.candidate_id == candidate.id,
+                ReconciliationDecision.matched_table == "teaching_methods",
+            )
+        )
+        if decision is None or decision.matched_id is None:
+            return None
+        return self.session.get(TeachingMethod, decision.matched_id)
+
+    def _candidate_edit_payload(self, candidate: CandidateKnowledgeItem) -> dict[str, Any]:
+        return {
+            "title": candidate.title,
+            "payload": dict(candidate.payload or {}),
+            "edited_at": datetime.utcnow().isoformat(),
+        }
 
     def _get_candidate(self, candidate_id: str) -> CandidateKnowledgeItem:
         try:

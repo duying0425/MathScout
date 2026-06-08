@@ -22,11 +22,13 @@ from mathscout.db.models import (
     CrawlJob,
     CrawlStatus,
     CrawlTask,
+    EvidenceSnippet,
     KnowledgePoint,
     ManualEditLog,
     NaturalLanguageCommand,
     OrchestrationSession,
     OrchestrationStatus,
+    ReconciliationDecision,
     ReviewItem,
     ReviewStatus,
     Section,
@@ -768,6 +770,52 @@ def review_queue(request: Request, session: AdminSession):
     )
 
 
+@router.get("/review/candidates/{candidate_id}")
+def review_candidate_detail(candidate_id: str, request: Request, session: AdminSession):
+    try:
+        parsed_id = uuid.UUID(candidate_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="未找到候选项。") from exc
+    candidate = session.get(CandidateKnowledgeItem, parsed_id)
+    if candidate is None:
+        raise HTTPException(status_code=404, detail="未找到候选项。")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/review_detail.html",
+        context={"c": _candidate_detail(session, candidate)},
+    )
+
+
+@router.post("/review/candidates/{candidate_id}/edit")
+def edit_review_candidate(
+    candidate_id: str,
+    session: AdminSession,
+    title: str = Form(""),
+    method_type: str = Form(""),
+    summary: str = Form(""),
+    steps: str = Form(""),
+    applicable_patterns: str = Form(""),
+    common_misconceptions: str = Form(""),
+    reason: str = Form(""),
+):
+    payload_updates = {
+        "method_type": method_type.strip(),
+        "summary": summary.strip(),
+        "steps": _lines(steps),
+        "applicable_patterns": _lines(applicable_patterns),
+        "common_misconceptions": _lines(common_misconceptions),
+    }
+    try:
+        ReviewService(session).edit_candidate(
+            candidate_id, title=title, payload_updates=payload_updates, reason=reason
+        )
+        session.commit()
+    except ReviewActionError as exc:
+        session.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _redirect(f"/admin/review/candidates/{candidate_id}")
+
+
 @router.post("/review/candidates/{candidate_id}/{action}")
 def review_candidate_action(
     candidate_id: str,
@@ -1106,6 +1154,93 @@ def _parse_pipeline_status(value: str):
         return PipelineStatus(value)
     except ValueError:
         return None
+
+
+def _lines(text: str) -> list[str]:
+    return [line.strip() for line in (text or "").splitlines() if line.strip()]
+
+
+def _read_text_preview(text_path: str | None, limit: int = 4000) -> str:
+    if not text_path:
+        return ""
+    from pathlib import Path
+
+    path = Path(text_path)
+    if not path.exists():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")[:limit]
+    except OSError:
+        return ""
+
+
+def _candidate_detail(session: Session, candidate: CandidateKnowledgeItem) -> dict[str, Any]:
+    payload = candidate.payload or {}
+    evidence_texts: list[str] = []
+    for raw_id in candidate.evidence_ids or []:
+        try:
+            evidence = session.get(EvidenceSnippet, uuid.UUID(str(raw_id)))
+        except ValueError:
+            evidence = None
+        if evidence is not None and evidence.text:
+            evidence_texts.append(evidence.text)
+
+    document = session.get(SourceDocument, candidate.document_id)
+    source: dict[str, Any] | None = None
+    source_preview = ""
+    if document is not None:
+        source = {
+            "url": document.url,
+            "kind": _display_document_kind(document.document_kind),
+            "pipeline_status": _display_pipeline_status(document.pipeline_status),
+        }
+        source_preview = _read_text_preview(document.text_path)
+
+    decision = session.scalar(
+        select(ReconciliationDecision).where(ReconciliationDecision.candidate_id == candidate.id)
+    )
+    decision_info: dict[str, Any] | None = None
+    matched_method: dict[str, Any] | None = None
+    if decision is not None:
+        decision_info = {"action": _display(decision.action), "rationale": decision.rationale}
+        if decision.matched_id is not None:
+            method = session.get(TeachingMethod, decision.matched_id)
+            if method is not None:
+                matched_method = {"id": str(method.id), "title": method.title}
+
+    steps = payload.get("steps") or []
+    applicable = payload.get("applicable_patterns") or []
+    misconceptions = payload.get("common_misconceptions") or []
+    return {
+        "id": str(candidate.id),
+        "title": candidate.title,
+        "type": _display(candidate.item_type),
+        "confidence": f"{candidate.confidence:.2f}",
+        "status": _display(candidate.review_status),
+        "book_code": candidate.book_code or "-",
+        "chapter_title": candidate.chapter_title or "-",
+        "section_title": candidate.section_title or "-",
+        "method_type": payload.get("method_type", "解题技巧"),
+        "summary": payload.get("summary", ""),
+        "steps": steps,
+        "applicable_patterns": applicable,
+        "prerequisites": payload.get("prerequisites") or [],
+        "common_misconceptions": misconceptions,
+        "classroom_warnings": payload.get("classroom_warnings") or [],
+        "example_patterns": payload.get("example_patterns") or [],
+        "knowledge_point_titles": payload.get("knowledge_point_titles") or [],
+        "source_teacher": payload.get("source_teacher") or "-",
+        "source_org": payload.get("source_org") or "-",
+        "source_region": payload.get("source_region") or "-",
+        "evidence_texts": evidence_texts,
+        "source": source,
+        "source_preview": source_preview,
+        "decision": decision_info,
+        "matched_method": matched_method,
+        "steps_text": "\n".join(steps),
+        "applicable_text": "\n".join(applicable),
+        "misconceptions_text": "\n".join(misconceptions),
+    }
 
 
 def _job_rows(session: Session, statement) -> list[dict[str, Any]]:
