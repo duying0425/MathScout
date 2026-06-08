@@ -60,6 +60,7 @@ Each phase is independently re-runnable. `pipeline_status` on `source_documents`
 | `/admin/crawl-jobs/<id>` | Job detail, task/document breakdown |
 | `/admin/documents` | All crawled documents |
 | `/admin/techniques` | Teaching methods knowledge base |
+| `/admin/problems` | Problem library (list); `/admin/problems/<id>` detail — stem, solutions+techniques, tested knowledge points (confirm/reject AI tagging), weakly-linked sections, figures |
 | `/admin/review` | Pending review queue |
 | `/admin/agent` | Agent: create crawl jobs via natural-language objective (AI-planned, decisions logged) |
 

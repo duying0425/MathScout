@@ -23,16 +23,23 @@ from mathscout.db.models import (
     CrawlStatus,
     CrawlTask,
     EvidenceSnippet,
+    Figure,
     KnowledgePoint,
+    ManualEditAction,
     ManualEditLog,
     NaturalLanguageCommand,
     OrchestrationSession,
     OrchestrationStatus,
+    Problem,
+    ProblemKnowledgePointLink,
+    ProblemSectionLink,
     ReconciliationDecision,
     ReviewItem,
     ReviewStatus,
     Section,
     SectionKnowledgePointLink,
+    Solution,
+    SolutionTechniqueLink,
     SourceDocument,
     SourceSite,
     StudentSkill,
@@ -340,6 +347,133 @@ def technique_library(request: Request, session: AdminSession):
         columns=["标题", "类型", "范围", "来源数", "复核"],
         rows=rows,
     )
+
+
+@router.get("/problems")
+def problem_library(request: Request, session: AdminSession):
+    problems = session.scalars(
+        select(Problem).order_by(Problem.created_at.desc()).limit(100)
+    ).all()
+    problem_ids = [problem.id for problem in problems]
+
+    solution_counts: dict[uuid.UUID, int] = {}
+    pending_kp: set[uuid.UUID] = set()
+    if problem_ids:
+        for problem_id, count in session.execute(
+            select(Solution.problem_id, func.count(Solution.id))
+            .where(Solution.problem_id.in_(problem_ids))
+            .group_by(Solution.problem_id)
+        ).all():
+            solution_counts[problem_id] = count
+        pending_kp = {
+            row[0]
+            for row in session.execute(
+                select(ReviewItem.target_id).where(
+                    ReviewItem.item_type == "problem_knowledge_point",
+                    ReviewItem.status == ReviewStatus.pending,
+                    ReviewItem.target_id.in_(problem_ids),
+                )
+            ).all()
+        }
+
+    rows = [
+        {
+            "id": str(problem.id),
+            "stem": _truncate(problem.stem, 80),
+            "type": _display(problem.problem_type),
+            "source": _display(problem.source_type),
+            "has_answer": "是" if problem.has_answer else "否",
+            "solution_count": solution_counts.get(problem.id, 0),
+            "source_count": problem.source_count,
+            "kp_pending": problem.id in pending_kp,
+            "status": _display(problem.review_status),
+        }
+        for problem in problems
+    ]
+    summary = {
+        "题目": _count(session, Problem),
+        "解法": _count(session, Solution),
+        "待复核·考察": len(pending_kp),
+    }
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/problems.html",
+        context={"summary": summary, "rows": rows},
+    )
+
+
+@router.get("/problems/{problem_id}")
+def problem_detail(problem_id: str, request: Request, session: AdminSession):
+    try:
+        parsed_id = uuid.UUID(problem_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="未找到题目。") from exc
+    problem = session.get(Problem, parsed_id)
+    if problem is None:
+        raise HTTPException(status_code=404, detail="未找到题目。")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/problem_detail.html",
+        context={"p": _problem_detail(session, problem)},
+    )
+
+
+@router.post("/problems/{problem_id}/confirm-knowledge-points")
+def confirm_problem_knowledge_points(problem_id: str, session: AdminSession):
+    problem, review = _problem_and_pending_kp_review(session, problem_id)
+    proposed = (review.payload or {}).get("proposed", [])
+    linked = 0
+    for entry in proposed:
+        matched_id = entry.get("matched_knowledge_point_id")
+        if not matched_id:
+            continue  # 未匹配到 canonical 知识点的，不建链接
+        knowledge_point_id = uuid.UUID(matched_id)
+        exists = session.scalar(
+            select(ProblemKnowledgePointLink).where(
+                ProblemKnowledgePointLink.problem_id == problem.id,
+                ProblemKnowledgePointLink.knowledge_point_id == knowledge_point_id,
+            )
+        )
+        if exists is None:
+            session.add(
+                ProblemKnowledgePointLink(
+                    problem_id=problem.id,
+                    knowledge_point_id=knowledge_point_id,
+                    relation_type="primary",
+                    confidence=problem.confidence,
+                )
+            )
+            linked += 1
+    review.status = ReviewStatus.approved
+    session.add(
+        ManualEditLog(
+            target_table="problems",
+            target_id=problem.id,
+            action=ManualEditAction.approve_ai_change,
+            after_payload={"linked_knowledge_points": linked},
+            reason="人工确认题目考察的知识点，建立链接。",
+            related_review_item_id=review.id,
+        )
+    )
+    session.commit()
+    return _redirect(f"/admin/problems/{problem_id}")
+
+
+@router.post("/problems/{problem_id}/reject-knowledge-points")
+def reject_problem_knowledge_points(problem_id: str, session: AdminSession):
+    _problem, review = _problem_and_pending_kp_review(session, problem_id)
+    review.status = ReviewStatus.rejected
+    session.add(
+        ManualEditLog(
+            target_table="problems",
+            target_id=review.target_id,
+            action=ManualEditAction.reject_ai_change,
+            reason="人工拒绝 AI 标注的题目考察知识点。",
+            related_review_item_id=review.id,
+        )
+    )
+    session.commit()
+    return _redirect(f"/admin/problems/{problem_id}")
 
 
 @router.get("/knowledge")
@@ -1516,6 +1650,122 @@ def _list_response(
             "bulk_action": bulk_action,
         },
     )
+
+
+def _problem_and_pending_kp_review(
+    session: Session, problem_id: str
+) -> tuple[Problem, ReviewItem]:
+    try:
+        parsed_id = uuid.UUID(problem_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="未找到题目。") from exc
+    problem = session.get(Problem, parsed_id)
+    if problem is None:
+        raise HTTPException(status_code=404, detail="未找到题目。")
+    review = session.scalar(
+        select(ReviewItem).where(
+            ReviewItem.item_type == "problem_knowledge_point",
+            ReviewItem.target_id == problem.id,
+            ReviewItem.status == ReviewStatus.pending,
+        )
+    )
+    if review is None:
+        raise HTTPException(status_code=400, detail="没有待复核的考察知识点。")
+    return problem, review
+
+
+def _problem_detail(session: Session, problem: Problem) -> dict[str, Any]:
+    solutions = []
+    for solution in session.scalars(
+        select(Solution).where(Solution.problem_id == problem.id).order_by(Solution.created_at)
+    ).all():
+        technique_titles = session.scalars(
+            select(TeachingMethod.title)
+            .join(SolutionTechniqueLink, SolutionTechniqueLink.method_id == TeachingMethod.id)
+            .where(SolutionTechniqueLink.solution_id == solution.id)
+        ).all()
+        solutions.append(
+            {
+                "approach_label": _display(solution.approach_label),
+                "steps": solution.steps or [],
+                "final_answer": _display(solution.final_answer),
+                "complexity": _display(solution.complexity),
+                "techniques": list(technique_titles),
+                "review_status": _display(solution.review_status),
+            }
+        )
+
+    sections = [
+        f"{book_code} · {chapter_title} · {section_title}"
+        for book_code, chapter_title, section_title in session.execute(
+            select(Book.book_code, Chapter.title, Section.title)
+            .join(ProblemSectionLink, ProblemSectionLink.section_id == Section.id)
+            .join(Chapter, Section.chapter_id == Chapter.id)
+            .join(Book, Chapter.book_id == Book.id)
+            .where(ProblemSectionLink.problem_id == problem.id)
+        ).all()
+    ]
+
+    confirmed_kps = list(
+        session.scalars(
+            select(KnowledgePoint.title)
+            .join(
+                ProblemKnowledgePointLink,
+                ProblemKnowledgePointLink.knowledge_point_id == KnowledgePoint.id,
+            )
+            .where(ProblemKnowledgePointLink.problem_id == problem.id)
+        ).all()
+    )
+
+    review = session.scalar(
+        select(ReviewItem).where(
+            ReviewItem.item_type == "problem_knowledge_point",
+            ReviewItem.target_id == problem.id,
+            ReviewItem.status == ReviewStatus.pending,
+        )
+    )
+    kp_review = None
+    if review is not None:
+        proposed = []
+        for entry in (review.payload or {}).get("proposed", []):
+            matched_id = entry.get("matched_knowledge_point_id")
+            matched_title = None
+            if matched_id:
+                matched = session.get(KnowledgePoint, uuid.UUID(matched_id))
+                matched_title = matched.title if matched else None
+            proposed.append({"title": entry.get("title"), "matched": matched_title})
+        kp_review = {"proposed": proposed}
+
+    figures = [
+        {
+            "kind": _display(figure.figure_kind),
+            "image_path": _display(figure.image_path),
+            "tikz_code": figure.tikz_code,
+            "caption": _display(figure.caption),
+            "origin": _display(figure.origin),
+        }
+        for figure in session.scalars(
+            select(Figure).where(Figure.owner_type == "problem", Figure.owner_id == problem.id)
+        ).all()
+    ]
+
+    return {
+        "id": str(problem.id),
+        "stem": problem.stem,
+        "problem_type": _display(problem.problem_type),
+        "difficulty": _display(problem.difficulty),
+        "source_type": _display(problem.source_type),
+        "has_answer": "是" if problem.has_answer else "否",
+        "source_count": problem.source_count,
+        "confidence": f"{problem.confidence:.2f}",
+        "review_status": _display(problem.review_status),
+        "created": _display(problem.created_at),
+        "solutions": solutions,
+        "sections": sections,
+        "confirmed_kps": confirmed_kps,
+        "kp_review": kp_review,
+        "figures": figures,
+    }
 
 
 def _redirect(path: str) -> RedirectResponse:

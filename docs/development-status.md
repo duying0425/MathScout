@@ -2,7 +2,24 @@
 
 最近更新：2026-06-08。
 
-## 本次更新（2026-06-08）— Phase C 切片 2：规则版题目抽取器（文本→canonical 端到端）
+## 本次更新（2026-06-08）— Phase C 切片 3：题目库 UI + 考察知识点人工复核
+
+把题目/解答数据可视化并闭合 KP 复核门控（切片 1 把"题目考察知识点"挂起为
+`ReviewItem`，本切片提供人工确认/拒绝的入口）。
+
+- **路由**（`admin/routes.py`）：`GET /admin/problems` 列表（题干/题型/来源/含答案/解法数/
+  来源数/复核/考察待复核徽标）；`GET /admin/problems/<id>` 详情（题干、解法+步骤+用到技巧、
+  考察知识点、弱关联小节、配图含 TikZ）；`POST .../confirm-knowledge-points` 确认建立
+  `problem_knowledge_point_links`，`POST .../reject-knowledge-points` 拒绝——均写 `ManualEditLog`
+  （`approve_ai_change` / `reject_ai_change`）。
+- **导航**（`_header.html`）：Phase 3 子导航新增「题目库」。
+- **模板**：`templates/admin/problems.html`、`problem_detail.html`。
+- **验证**：`ruff` 干净（4 个 E501 为既有）；`pytest` 44 全过（新增 `test_problem_admin`：
+  详情装配、确认建链接+写日志、拒绝不建链接）。实盘起服务器 curl 验证：列表/详情 HTTP 200、
+  确认 POST 303 后详情出现「✅ 勾股定理」（链接已建）。
+- **下一步**：摄取层数学内容（LaTeX + 图片 + 可选图片→TikZ）、AI 抽取器、小范围试点。
+
+## 此前更新（2026-06-08）— Phase C 切片 2：规则版题目抽取器（文本→canonical 端到端）
 
 把上一切片的调和骨架"喂活"：新增规则版抽取器，离线可测地从清洗文本产出题目/解答。
 

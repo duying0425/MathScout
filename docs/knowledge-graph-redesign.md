@@ -265,18 +265,20 @@ semantic_key = normalize_semantic_key(f"{series.name}:{book.book_code}:{section.
 按切片推进（先确定性、可测的骨架，再接风险高的抓取/多模态/UI）：
 
 1. ~~建表~~：事实层 schema 已在 Phase B 建好；本期只接入**行为**。
-2. 📋 摄取层加数学内容支持（LaTeX 抽取 + 图片附件 + 可选图片→TikZ）。
-3. ✅ **抽取契约**：`ExtractedProblem` / `ExtractedSolution` / `ExtractedFigure` +
+2. ✅ **抽取契约**：`ExtractedProblem` / `ExtractedSolution` / `ExtractedFigure` +
    `CandidateItemType` 扩展（`problem` / `solution`）。
-4. ✅ **调和骨架**（`pipeline/problem_extract.ProblemReconciler`）：候选 → canonical
+3. ✅ **调和骨架**（`pipeline/problem_extract.ProblemReconciler`）：候选 → canonical
    题目/解答/配图；题目↔小节软链接、解答↔**既有**技巧链接（匹配不到不新建）；
    题目↔知识点"考察"**不自动写链接、改生成 ReviewItem 入复核**。
-5. 🚧 真实抽取器：**规则版已实现**（`extraction/problem_rule_based.RuleBasedProblemExtractor`
+4. 🚧 真实抽取器：**规则版已实现**（`extraction/problem_rule_based.RuleBasedProblemExtractor`
    按 例N/题N/解：/解法N/答案 等标记切分题目与解答）+ 便捷入口
    `pipeline/problem_extract.extract_and_reconcile_problems`（文本→canonical 端到端）；
    **AI 版待做**（输出同一 `ExtractedProblem` 契约即可替换）。
+5. ✅ **题目库 UI**：`/admin/problems` 列表 + `/admin/problems/<id>` 详情（题干、解法+步骤+
+   用到技巧、考察知识点、弱关联小节、配图）；详情页可**确认/拒绝** AI 标注的考察知识点
+   （确认才建 `problem_knowledge_point_links`，写 `ManualEditLog`），闭合 KP 复核门控。
 6. 📋 摄取层数学内容（LaTeX + 图片 + 可选图片→TikZ）——见 [ingestion.md §5](ingestion.md)。
-7. 📋 admin：题目库列表 + 题目详情页（渲染题干 / 解法列表 / 考察知识点 / 用到技巧）。
+7. 📋 AI 抽取器（多模态：含图片→TikZ）。
 8. 📋 先用**一个**范围可控的题源打通端到端，质量达标再扩量。
 
 ## 7. 已定的决策

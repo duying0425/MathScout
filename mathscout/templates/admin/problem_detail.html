@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>题目详情 - MathScout 后台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f6f7f9;
+        color: #1d2433;
+      }
+
+      body { margin: 0; }
+
+{% include "admin/_shared_styles.html" %}
+
+      main { display: grid; gap: 18px; padding: 24px; max-width: 920px; }
+      a { color: #315c9f; text-decoration: none; }
+      h2 { font-size: 16px; margin: 0 0 10px; }
+
+      .card {
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+
+      .stem { font-size: 16px; line-height: 1.6; white-space: pre-wrap; }
+
+      .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; }
+      .meta span { color: #596579; font-size: 13px; }
+      .meta b { color: #1d2433; font-weight: 600; }
+
+      .solution { border-top: 1px solid #eef1f6; margin-top: 12px; padding-top: 12px; }
+      .solution:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+      .solution-title { font-weight: 600; }
+      ol { margin: 8px 0; padding-left: 22px; }
+      li { font-size: 14px; line-height: 1.6; }
+
+      .tag {
+        background: #eef2fb;
+        border-radius: 999px;
+        color: #315c9f;
+        font-size: 12px;
+        margin-right: 6px;
+        padding: 2px 9px;
+      }
+
+      ul.plain { list-style: none; margin: 0; padding: 0; }
+      ul.plain li { padding: 3px 0; }
+
+      .review-box {
+        background: #fff8ef;
+        border: 1px solid #f0d8b4;
+        border-radius: 8px;
+        padding: 14px 16px;
+      }
+      .actions { display: flex; gap: 10px; margin-top: 12px; }
+      button {
+        border: 0;
+        border-radius: 6px;
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+        padding: 8px 14px;
+      }
+      button.approve { background: #15803d; }
+      button.reject { background: #b91c1c; }
+      pre {
+        background: #0f172a;
+        border-radius: 6px;
+        color: #e2e8f0;
+        font-size: 12px;
+        overflow-x: auto;
+        padding: 12px;
+      }
+      .muted { color: #596579; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    {% set page_title = "题目详情" %}
+    {% include "admin/_header.html" %}
+    <main>
+      <a href="/admin/problems">← 返回题目库</a>
+
+      <section class="card" aria-label="题干">
+        <div class="stem">{{ p.stem }}</div>
+        <div class="meta">
+          <span>题型 <b>{{ p.problem_type }}</b></span>
+          <span>难度 <b>{{ p.difficulty }}</b></span>
+          <span>来源 <b>{{ p.source_type }}</b></span>
+          <span>含答案 <b>{{ p.has_answer }}</b></span>
+          <span>来源数 <b>{{ p.source_count }}</b></span>
+          <span>置信度 <b>{{ p.confidence }}</b></span>
+          <span>复核 <b>{{ p.review_status }}</b></span>
+          <span>创建 <b>{{ p.created }}</b></span>
+        </div>
+      </section>
+
+      <section class="card" aria-label="解法">
+        <h2>解法（{{ p.solutions|length }}）</h2>
+        {% if p.solutions %}
+          {% for s in p.solutions %}
+            <div class="solution">
+              <div class="solution-title">{{ s.approach_label }}</div>
+              {% if s.steps %}
+                <ol>{% for step in s.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+              {% endif %}
+              <div class="muted">最终答案：{{ s.final_answer }}　复杂度：{{ s.complexity }}</div>
+              {% if s.techniques %}
+                <div style="margin-top:6px">用到技巧：
+                  {% for t in s.techniques %}<span class="tag">{{ t }}</span>{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="muted">暂无解法。</div>
+        {% endif %}
+      </section>
+
+      <section class="card" aria-label="考察知识点">
+        <h2>考察知识点</h2>
+        {% if p.confirmed_kps %}
+          <ul class="plain">
+            {% for kp in p.confirmed_kps %}<li>✅ {{ kp }}</li>{% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">尚无已确认的考察知识点。</div>
+        {% endif %}
+
+        {% if p.kp_review %}
+          <div class="review-box" style="margin-top:12px">
+            <div class="muted">AI 标注、待人工确认（置信度低，确认后才建立链接）：</div>
+            <ul class="plain">
+              {% for item in p.kp_review.proposed %}
+                <li>
+                  {{ item.title }}
+                  {% if item.matched %}→ 匹配到「{{ item.matched }}」{% else %}
+                    <span class="muted">（未匹配到 canonical 知识点，确认时跳过）</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+            <div class="actions">
+              <form method="post"
+                    action="/admin/problems/{{ p.id }}/confirm-knowledge-points">
+                <button type="submit" class="approve">确认并建立链接</button>
+              </form>
+              <form method="post"
+                    action="/admin/problems/{{ p.id }}/reject-knowledge-points">
+                <button type="submit" class="reject">拒绝</button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="card" aria-label="弱关联小节">
+        <h2>弱关联小节</h2>
+        {% if p.sections %}
+          <ul class="plain">
+            {% for sec in p.sections %}<li>{{ sec }}</li>{% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">未关联到小节。</div>
+        {% endif %}
+      </section>
+
+      {% if p.figures %}
+        <section class="card" aria-label="配图">
+          <h2>配图（{{ p.figures|length }}）</h2>
+          {% for fig in p.figures %}
+            <div class="solution">
+              <div class="muted">{{ fig.kind }} · 来源 {{ fig.origin }} · {{ fig.caption }}</div>
+              {% if fig.image_path and fig.image_path != "-" %}
+                <div class="muted">图片：{{ fig.image_path }}</div>
+              {% endif %}
+              {% if fig.tikz_code %}<pre>{{ fig.tikz_code }}</pre>{% endif %}
+            </div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    </main>
+  </body>
+</html>
