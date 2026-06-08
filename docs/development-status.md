@@ -2,7 +2,30 @@
 
 最近更新：2026-06-08。
 
-## 本次更新（2026-06-08）— Phase A 实现：知识点 canonical 化（425→417）
+## 本次更新（2026-06-08）— Phase B 实现：题目/解答事实层 schema + 技巧概念澄清
+
+四维知识图谱重构第二期。把题目/解答这一 canonical 事实层的**完整 schema 建出来**
+（空表、外键自洽），并澄清"解答 ≠ 技巧"，为 Phase C（抓取/抽取/UI）铺路。
+
+- **模型**（`db/models.py`）：新增 `Problem`（题干 LaTeX、题型/难度/来源类别/是否含答案）、
+  `Solution`（一题多解、思路/步骤/最终答案）、`Figure`（题干/解步配图，原图 + 可选 TikZ，
+  多态归属）、以及 3 张链接表 `problem_knowledge_point_links`（考察）、
+  `problem_section_links`（弱关联）、`solution_technique_links`（用到）。
+  `teaching_methods`（=技巧）/ `knowledge_points` 等既有表不动。
+- **依赖说明**：原计划只建 `solutions` + `solution_technique_links`，但 `solutions.problem_id`
+  外键指向 `problems`，`create_all` 需被引用表存在，故把事实层 schema 一次建齐；Phase C
+  因此只接**行为**（摄取/抽取/复核/UI），不再重复建表。
+- **概念澄清**（`extraction/ai_method_extractor.py`）：System Prompt 新增规则 11 +
+  method_type 说明——"解题技巧/模型是跨题复用方法（将军饮马、手拉手…），不是某道题的
+  一次性解答，不要一题一技巧"。
+- **验证**：`ruff` 干净（4 个 E501 为既有）；`pytest` 36 全过（新增 `test_phase_b_schema`：
+  6 张新表建出 + 题目/解答/配图/三种链接落库与关系可用）。`init-db` 实盘确认 6 张新表
+  外键自洽、知识点表已无 `section_id`。
+- **下一步**：Phase C —— 摄取层数学内容（LaTeX + 图片 + 可选图片→TikZ）、抽取
+  `ExtractedProblem`/`ExtractedSolution` + `CandidateItemType` 扩展、候选→调和→canonical、
+  题目库 UI；先小范围试点。
+
+## 此前更新（2026-06-08）— Phase A 实现：知识点 canonical 化（425→417）
 
 落地四维知识图谱重构的第一期。知识点从"硬挂在单个小节"升级为 **canonical（跨版本唯一）**，
 小节与知识点改为多对多覆盖关系。

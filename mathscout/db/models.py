@@ -421,6 +421,150 @@ class RegionAdoption(Base):
     )
 
 
+# --------------------------------------------------------------------------- #
+# 四维知识图谱 · 题目 / 解答 事实层（Phase B 建 schema，Phase C 接抓取/抽取/UI）       #
+# 见 docs/knowledge-graph-redesign.md。题目与知识点同为版本无关的"事实"；解答是题目     #
+# 专属的解题路径（可一题多解），通过 solution_technique_links 引用可复用的解题技巧       #
+# （= teaching_methods）。解答 ≠ 技巧。                                              #
+# --------------------------------------------------------------------------- #
+
+
+class Problem(Base):
+    """Canonical 题目：版本无关、弱关联到小节。题干以 LaTeX/含数学的 Markdown 存储。"""
+
+    __tablename__ = "problems"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    stem: Mapped[str] = mapped_column(Text)  # LaTeX / 含数学的 Markdown
+    # 题型：选择/填空/解答/证明…
+    problem_type: Mapped[str | None] = mapped_column(String(120), index=True)
+    difficulty: Mapped[str | None] = mapped_column(String(40))  # 基础/中等/难，或数值标签
+    source_type: Mapped[str | None] = mapped_column(String(80), index=True)  # 课堂/试卷/教辅/题库
+    source_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("source_documents.id")
+    )
+    has_answer: Mapped[bool] = mapped_column(Boolean, default=False)
+    semantic_key: Mapped[str | None] = mapped_column(String(500), index=True)
+    aliases: Mapped[list[str]] = mapped_column(JSON, default=list)
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("evidence_snippets.id"))
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    source_count: Mapped[int] = mapped_column(Integer, default=1)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    human_locked: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_human_edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_status: Mapped[ReviewStatus] = mapped_column(
+        Enum(ReviewStatus), default=ReviewStatus.pending
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+    solutions: Mapped[list[Solution]] = relationship(back_populates="problem")
+
+
+class Solution(Base):
+    """题目的一条解题路径（可一题多解）。通过 solution_technique_links 引用所用技巧。"""
+
+    __tablename__ = "solutions"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    problem_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("problems.id"), index=True)
+    approach_label: Mapped[str | None] = mapped_column(String(200))  # 思路名，如"构造辅助线"
+    steps: Mapped[list[str]] = mapped_column(JSON, default=list)  # 分步路径（LaTeX）
+    final_answer: Mapped[str | None] = mapped_column(Text)
+    complexity: Mapped[str | None] = mapped_column(String(80))  # 复杂度/优劣评估
+    source_teacher: Mapped[str | None] = mapped_column(String(200), index=True)
+    source_org: Mapped[str | None] = mapped_column(String(300), index=True)
+    source_region: Mapped[str | None] = mapped_column(String(120), index=True)
+    source_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("source_documents.id")
+    )
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("evidence_snippets.id"))
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    human_locked: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_human_edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_status: Mapped[ReviewStatus] = mapped_column(
+        Enum(ReviewStatus), default=ReviewStatus.pending
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+    problem: Mapped[Problem] = relationship(back_populates="solutions")
+
+
+class Figure(Base):
+    """题干 / 解题步骤的配图：原图 image_path + 可选 AI 生成的 TikZ 源码。多态归属。"""
+
+    __tablename__ = "figures"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    owner_type: Mapped[str] = mapped_column(String(40), index=True)  # problem | solution
+    owner_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    figure_kind: Mapped[str] = mapped_column(String(40), default="image")  # image | tikz
+    image_path: Mapped[str | None] = mapped_column(String(1000))
+    tikz_code: Mapped[str | None] = mapped_column(Text)  # AI 由图片生成（可选）
+    caption: Mapped[str | None] = mapped_column(String(500))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    origin: Mapped[str] = mapped_column(String(40), default="original")  # original | ai_generated
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class ProblemKnowledgePointLink(Base):
+    """题目 ⟷ 知识点（考察）。出题前设计好的关系；AI 标注、低置信、强制进复核。"""
+
+    __tablename__ = "problem_knowledge_point_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "problem_id", "knowledge_point_id", name="uq_problem_knowledge_point_link"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    problem_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("problems.id"), index=True)
+    knowledge_point_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("knowledge_points.id"), index=True
+    )
+    # primary | secondary
+    relation_type: Mapped[str] = mapped_column(String(80), default="primary", index=True)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("evidence_snippets.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class ProblemSectionLink(Base):
+    """题目 ⟷ 小节（弱关联）。题目从某小节"提起"但跨版本共通；软链接、非归属。"""
+
+    __tablename__ = "problem_section_links"
+    __table_args__ = (
+        UniqueConstraint("problem_id", "section_id", name="uq_problem_section_link"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    problem_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("problems.id"), index=True)
+    section_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sections.id"), index=True)
+    # exercise_of | introduced_in
+    relation_type: Mapped[str] = mapped_column(String(80), default="exercise_of", index=True)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("evidence_snippets.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class SolutionTechniqueLink(Base):
+    """解答 ⟷ 技巧（用到）。一条解答用到 0/1/多个技巧；技巧 = teaching_methods。"""
+
+    __tablename__ = "solution_technique_links"
+    __table_args__ = (
+        UniqueConstraint("solution_id", "method_id", name="uq_solution_technique_link"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    solution_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("solutions.id"), index=True)
+    method_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teaching_methods.id"), index=True)
+    # primary | auxiliary
+    relation_type: Mapped[str] = mapped_column(String(80), default="primary", index=True)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("evidence_snippets.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
 class CrawlJob(Base):
     __tablename__ = "crawl_jobs"
 

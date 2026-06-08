@@ -244,16 +244,25 @@ semantic_key = normalize_semantic_key(f"{series.name}:{book.book_code}:{section.
 > 注：纯标题去重偶尔会把同名异义判定合并（如 SAS 既是全等判定也是相似判定）。这类可由
 > 人工"拆分"修正；去重粒度仍是 §8 的开放项。
 
-### Phase B — 技巧 / 解答概念澄清（几乎不动表）
+### Phase B — 技巧 / 解答概念澄清 + 事实层 schema ✅ 已实现
 
-1. 文档 + 抽取 prompt 明确"技巧 = 可复用模型，按题去重技巧"。
-2. 先建 `solutions` + `solution_technique_links` 空表（为 Phase C 铺路）。
-3. `teaching_methods` 不动（已够表达技巧）。
+1. ✅ 抽取 prompt 明确"解题技巧/模型 = 跨题复用方法，不要一题一技巧"
+   （[ai_method_extractor.py](../mathscout/extraction/ai_method_extractor.py) 规则 11 + method_type 说明）。
+2. ✅ 建出题目/解答事实层的**完整 schema（空表、外键自洽）**：`problems`、`solutions`、
+   `figures`、`problem_knowledge_point_links`、`problem_section_links`、
+   `solution_technique_links`（见 §3）。
+   > 注：原计划只建 `solutions` + `solution_technique_links`，但 `solutions.problem_id`
+   > 外键指向 `problems`，`create_all` 需要被引用表存在，故把 §3 事实层 schema 一次建齐；
+   > Phase C 因此聚焦**摄取 + 抽取 + UI 行为**，不再重复建表。
+3. ✅ `teaching_methods`（= 技巧）/ `knowledge_points` 等既有表不动。
+
+**验收（已通过）**：`init-db` 后 6 张新表均建出且外键自洽；`test_phase_b_schema` 验证
+题目→解答（一题多解）、解答→技巧、题目→知识点/小节、配图（含 TikZ 字段）落库与关系可用。
+新表当前为空，等待 Phase C 接入抓取/抽取/复核。
 
 ### Phase C — 题目 + 解答抓取建模（高风险，**最后做，先小范围试点**）
 
-1. 建表：`problems`、`solutions`、`figures`、`problem_knowledge_point_links`、
-   `problem_section_links`、`solution_technique_links`。
+1. ~~建表~~：事实层 schema 已在 Phase B 建好；本期只接入**行为**。
 2. 摄取层加数学内容支持（LaTeX 抽取 + 图片附件 + 可选图片→TikZ）。
 3. 抽取层加 `ExtractedProblem` / `ExtractedSolution` + `CandidateItemType` 扩展。
 4. 候选 → 调和 → canonical 走现有管线；题目-知识点"考察"链接强制进复核。
