@@ -234,7 +234,9 @@ class Section(Base):
     position: Mapped[int] = mapped_column(Integer, default=0)
 
     chapter: Mapped[Chapter] = relationship(back_populates="sections")
-    knowledge_points: Mapped[list[KnowledgePoint]] = relationship(back_populates="section")
+    knowledge_point_links: Mapped[list[SectionKnowledgePointLink]] = relationship(
+        back_populates="section"
+    )
 
 
 class StudentSkill(Base):
@@ -247,10 +249,18 @@ class StudentSkill(Base):
 
 
 class KnowledgePoint(Base):
+    """Canonical 知识点：跨教材版本唯一、共享（四维知识图谱的"事实层"）。
+
+    知识点与教材小节的归属关系由 SectionKnowledgePointLink 表达（多对多），不再由
+    单个小节硬绑定。`semantic_key` 为**基于内容**的去重键（规范化标题），使同一知识点
+    在多个版本只存一条。见 docs/knowledge-graph-redesign.md。
+    """
+
     __tablename__ = "knowledge_points"
 
     id: Mapped[uuid.UUID] = uuid_pk()
-    section_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sections.id"), index=True)
+    # 注意：旧版的 section_id 硬绑定已移除，归属改由 section_knowledge_point_links 表达。
+    # 旧库的物理列由 migrations._canonicalize_knowledge_points 回填链接后 DROP。
     title: Mapped[str] = mapped_column(String(300))
     description: Mapped[str | None] = mapped_column(Text)
     semantic_key: Mapped[str | None] = mapped_column(String(500), index=True)
@@ -265,7 +275,42 @@ class KnowledgePoint(Base):
         Enum(ReviewStatus), default=ReviewStatus.pending
     )
 
-    section: Mapped[Section] = relationship(back_populates="knowledge_points")
+    section_links: Mapped[list[SectionKnowledgePointLink]] = relationship(
+        back_populates="knowledge_point"
+    )
+
+
+class SectionKnowledgePointLink(Base):
+    """小节 ⟷ 知识点（覆盖）多对多链接。
+
+    替代旧的 KnowledgePoint.section_id 硬绑定：知识点升为 canonical（跨版本唯一），
+    教材小节通过本表"覆盖"知识点；同一知识点可被多个版本的多个小节覆盖。
+    relation_type: introduce（首次引入）| reinforce（巩固）| extend（拓展）。
+    """
+
+    __tablename__ = "section_knowledge_point_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "section_id",
+            "knowledge_point_id",
+            "relation_type",
+            name="uq_section_knowledge_point_link",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    section_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sections.id"), index=True)
+    knowledge_point_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("knowledge_points.id"), index=True
+    )
+    relation_type: Mapped[str] = mapped_column(String(80), default="introduce", index=True)
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("evidence_snippets.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+    section: Mapped[Section] = relationship(back_populates="knowledge_point_links")
+    knowledge_point: Mapped[KnowledgePoint] = relationship(back_populates="section_links")
 
 
 class TeachingMethod(Base):

@@ -32,6 +32,7 @@ from mathscout.db.models import (
     ReviewItem,
     ReviewStatus,
     Section,
+    SectionKnowledgePointLink,
     SourceDocument,
     SourceSite,
     StudentSkill,
@@ -369,7 +370,13 @@ def knowledge_browser(request: Request, session: AdminSession):
             )
             .outerjoin(Chapter, Chapter.book_id == Book.id)
             .outerjoin(Section, Section.chapter_id == Chapter.id)
-            .outerjoin(KnowledgePoint, KnowledgePoint.section_id == Section.id)
+            .outerjoin(
+                SectionKnowledgePointLink, SectionKnowledgePointLink.section_id == Section.id
+            )
+            .outerjoin(
+                KnowledgePoint,
+                KnowledgePoint.id == SectionKnowledgePointLink.knowledge_point_id,
+            )
             .group_by(Book.id)
             .order_by(Book.grade, Book.book_code)
         ).all()
@@ -386,11 +393,17 @@ def knowledge_browser(request: Request, session: AdminSession):
                 Book.book_code,
                 Chapter.title.label("chapter_title"),
                 Section.title.label("section_title"),
-                func.count(KnowledgePoint.id).label("knowledge_count"),
+                func.count(func.distinct(KnowledgePoint.id)).label("knowledge_count"),
             )
             .join(Chapter, Section.chapter_id == Chapter.id)
             .join(Book, Chapter.book_id == Book.id)
-            .outerjoin(KnowledgePoint, KnowledgePoint.section_id == Section.id)
+            .outerjoin(
+                SectionKnowledgePointLink, SectionKnowledgePointLink.section_id == Section.id
+            )
+            .outerjoin(
+                KnowledgePoint,
+                KnowledgePoint.id == SectionKnowledgePointLink.knowledge_point_id,
+            )
             .group_by(Section.id, Chapter.id, Book.id)
             .order_by(Book.grade, Book.book_code, Chapter.position, Section.position)
             .limit(40)

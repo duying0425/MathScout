@@ -12,6 +12,7 @@ from mathscout.db.models import (
     MethodKnowledgePointLink,
     MethodSectionLink,
     Section,
+    SectionKnowledgePointLink,
     TeachingMethod,
     TextbookSeries,
 )
@@ -38,7 +39,12 @@ def _seed_textbook(session) -> Section:
     session.add(section)
     session.flush()
     for title in ("有理数加法", "有理数减法"):
-        session.add(KnowledgePoint(section_id=section.id, title=title))
+        point = KnowledgePoint(title=title, semantic_key=title)
+        session.add(point)
+        session.flush()
+        session.add(
+            SectionKnowledgePointLink(section_id=section.id, knowledge_point_id=point.id)
+        )
     session.flush()
     return section
 

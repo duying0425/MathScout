@@ -28,7 +28,7 @@
 | robots.txt 校验 / 按域限速 | ✅ | 已接入 `CrawlJobRunner`，`RESPECT_ROBOTS` 开关 |
 | 启动重置僵尸 running 作业/任务 | ✅ | `reset_stale_jobs`（main 启动调用）|
 | 候选复核详情页 + 编辑（同步 canonical 方法）| ✅ | `/admin/review/candidates/<id>` |
-| 四维知识图谱重构（知识点 canonical 化 / 题目 / 解答 / 技巧）| 📋 | 设计已定稿，开发待启动，见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md) |
+| 四维知识图谱重构（知识点 canonical 化 / 题目 / 解答 / 技巧）| 🚧 | **Phase A（知识点 canonical 化）已实现**；B/C 规划中。见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md) |
 | PostgreSQL + Alembic + pgvector | 📋 | 当前仅 SQLite + 手写迁移 |
 | 独立 worker / 并发编排 | 📋 | 当前用 FastAPI `BackgroundTasks` |
 | 方法库编辑表单、合并/拆分、检索过滤 | 🚧 | 候选已可编辑；canonical 方法的独立编辑/合并仍待补 |
@@ -385,8 +385,8 @@ FastAPI/Jinja 页面已经够用。
 
 ### 四维知识图谱重构 📋（与上述阶段并行推进，见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md)）
 
-- **Phase A — 知识点 canonical 化**：移除 `section_id` 硬绑定，改用
-  `section_knowledge_point_links`；`semantic_key` 改基于内容。风险最低、不依赖抓题目，**先做**。
+- **Phase A — 知识点 canonical 化** ✅：移除 `section_id` 硬绑定，改用
+  `section_knowledge_point_links`；`semantic_key` 改基于内容。北师大 6 册 425→417 canonical。
 - **Phase B — 技巧/解答概念澄清**：明确"解答 ≠ 技巧"；建 `solutions` /
   `solution_technique_links` 空表铺路；`teaching_methods` 不动。
 - **Phase C — 题目 + 解答**：建 `problems` / `solutions` / `figures` 与考察/弱关联链接；

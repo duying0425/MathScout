@@ -2,7 +2,32 @@
 
 最近更新：2026-06-08。
 
-## 本次更新（2026-06-08）— 设计定稿：四维知识图谱重构（文档先行，开发待启动）
+## 本次更新（2026-06-08）— Phase A 实现：知识点 canonical 化（425→417）
+
+落地四维知识图谱重构的第一期。知识点从"硬挂在单个小节"升级为 **canonical（跨版本唯一）**，
+小节与知识点改为多对多覆盖关系。
+
+- **模型**（`db/models.py`）：移除 `KnowledgePoint.section_id`；新增
+  `SectionKnowledgePointLink`（小节⟷知识点，`relation_type`: introduce/reinforce/extend，
+  仿 `method_section_links`）；`Section.knowledge_point_links` / `KnowledgePoint.section_links`
+  关系替换旧的 `knowledge_points` 直连关系。
+- **迁移**（`db/migrations._canonicalize_knowledge_points`）：以"旧 `section_id` 列是否
+  存在"为幂等开关——按旧 `section_id` 原生 SQL 回填链接 → 先删索引再
+  `ALTER TABLE ... DROP COLUMN section_id`（SQLite 3.35+/PG 支持，已实测 3.50.4）→
+  `semantic_key` 重算为基于内容 → 合并重复知识点（小节/方法链接改指向 canonical 后删除）。
+- **导入**（`importers/template.py`）：按内容键全局去重（同一知识点跨册/版本只建一条），
+  写 `section_knowledge_point_links`；导入幂等。新增 `section_links` 统计项。
+- **读取方**：`admin/routes.py` 知识库页两处 join、`extract.py` 的
+  `_link_knowledge_points_in_section` / `_link_by_text_match` 均改走链接表。
+- **验证**：`ruff` 干净（4 个 E501 为既有、与本次无关）；`pytest` 34 全过（新增
+  `test_migrations` 迁移用例、`test_template_shape` 导入 canonical 化用例，更新
+  `test_extract_mapping` seed 改用链接表）。实盘 `init-db + import-template`：北师大 6 册
+  **425 条原始知识点 → 417 条 canonical + 425 条覆盖 link**，8 个跨小节/跨册重复各合并为
+  一条；`section_id` 列已 DROP；知识库页查询正常。
+- **已知**：纯标题去重偶有同名异义合并（如 SAS 全等/相似判定），可人工"拆分"修正；
+  去重粒度仍是开放项。下一步：Phase B（技巧/解答概念澄清，建 `solutions` 空表）。
+
+## 此前更新（2026-06-08）— 设计定稿：四维知识图谱重构（文档先行）
 
 重新梳理数据关系后，确定把覆盖范围从"以教学方法为核心"升级为**四维知识图谱**：
 教材/章/节（版本相关，仅决定顺序）、知识点（版本无关、canonical）、题目（版本无关、
@@ -232,11 +257,11 @@ http://127.0.0.1:8000/admin
 后台 UI 与 CLI 使用相同的 `DATABASE_URL`。在默认 SQLite 配置下，初始化后控制台
 应显示导入的模板数据：
 
-- 知识点：425
+- 知识点：417（canonical；425 条原始去重后，8 个跨小节/跨册重复各合并为一条）
 - 来源站点：3
 
-知识库页面会显示导入模板中的 1 个教材系列、6 个册、34 章、127 节、425 个知识点、
-16 项学生能力。
+知识库页面会显示导入模板中的 1 个教材系列、6 个册、34 章、127 节、417 个 canonical
+知识点（425 条小节覆盖链接）、16 项学生能力。
 
 ## 交接说明
 

@@ -12,6 +12,7 @@ from mathscout.db.models import (
     Chapter,
     KnowledgePoint,
     Section,
+    SectionKnowledgePointLink,
     StudentSkill,
     TextbookSeries,
 )
@@ -28,6 +29,7 @@ def import_template_dir(session: Session, template_dir: Path) -> dict[str, int]:
         "sections": 0,
         "skills": 0,
         "knowledge_points": 0,
+        "section_links": 0,
     }
     for file in files:
         data = json.loads(file.read_text(encoding="utf-8"))
@@ -124,28 +126,45 @@ def _import_semester(session: Session, data: dict, stats: dict[str, int]) -> dic
                 session.flush()
                 stats["sections"] += 1
 
-            for point in section_data.get("knowledge_points", []):
-                semantic_key = normalize_semantic_key(
-                    f"{series.name}:{book.book_code}:{section.section_code}:{point}"
+            for point_index, point in enumerate(
+                section_data.get("knowledge_points", []), start=1
+            ):
+                # canonical 知识点：基于内容（标题）去重，跨版本/跨小节共享一条记录。
+                semantic_key = normalize_semantic_key(point)
+                knowledge_point = session.scalar(
+                    select(KnowledgePoint).where(KnowledgePoint.semantic_key == semantic_key)
                 )
-                existing_point = session.scalar(
-                    select(KnowledgePoint).where(
-                        KnowledgePoint.section_id == section.id,
-                        KnowledgePoint.semantic_key == semantic_key,
+                if knowledge_point is None:
+                    knowledge_point = KnowledgePoint(
+                        title=point,
+                        description=None,
+                        semantic_key=semantic_key,
+                        source_type="template",
+                        confidence=0.9,
+                    )
+                    session.add(knowledge_point)
+                    session.flush()
+                    stats["knowledge_points"] += 1
+
+                # 小节 → 知识点 覆盖链接（同一知识点可被多个小节/版本覆盖）。
+                link_exists = session.scalar(
+                    select(SectionKnowledgePointLink).where(
+                        SectionKnowledgePointLink.section_id == section.id,
+                        SectionKnowledgePointLink.knowledge_point_id == knowledge_point.id,
+                        SectionKnowledgePointLink.relation_type == "introduce",
                     )
                 )
-                if existing_point is None:
+                if link_exists is None:
                     session.add(
-                        KnowledgePoint(
+                        SectionKnowledgePointLink(
                             section_id=section.id,
-                            title=point,
-                            description=None,
-                            semantic_key=semantic_key,
-                            source_type="template",
+                            knowledge_point_id=knowledge_point.id,
+                            relation_type="introduce",
+                            position=point_index,
                             confidence=0.9,
                         )
                     )
-                    stats["knowledge_points"] += 1
+                    stats["section_links"] += 1
     return stats
 
 

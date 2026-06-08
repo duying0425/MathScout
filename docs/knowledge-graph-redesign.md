@@ -106,12 +106,13 @@ semantic_key = normalize_semantic_key(f"{series.name}:{book.book_code}:{section.
 
 | 字段 | 变更 | 说明 |
 |------|------|------|
-| `section_id` | **移除依赖** | 不再作为归属外键；改由 `section_knowledge_point_links` 表达 |
-| `semantic_key` | **改语义** | 由"带 section 作用域"改为**基于内容**（规范化标题，可含学段/主题），使跨版本去重生效 |
-| `code` | 新增（可选） | canonical 知识点编码，便于稳定引用 |
+| `section_id` | **移除** | 不再作为归属外键；改由 `section_knowledge_point_links` 表达 |
+| `semantic_key` | **改语义** | 由"带 section 作用域"改为**基于内容**（规范化标题），使跨版本去重生效 |
+| `code` | 暂不新增 | canonical 编码留作开放项（见 §8）；当前 `semantic_key` 已够去重 |
 
-> SQLite 删列受限：`section_id` 可先**保留物理列但停用**（代码层不再读写、新建表里
-> 不声明），或按下文迁移方案整表重建。优先选"停用"以降低风险。
+> ✅ 已实现：`section_id` 列由 `migrations._canonicalize_knowledge_points` **DROP**
+> （回填链接后，先删索引再 `ALTER TABLE ... DROP COLUMN`；SQLite 3.35+ / PostgreSQL
+> 均支持）。模型已不含该列，新建库直接为干净结构，旧库启动时一次性自动迁移。
 
 #### `problems`（新增）
 
@@ -220,24 +221,28 @@ semantic_key = normalize_semantic_key(f"{series.name}:{book.book_code}:{section.
 
 ## 6. 分期实施路线（按风险排序，不要一把梭）
 
-### Phase A — 知识点 canonical 化（schema 重构，独立于题目，**先做**）
+### Phase A — 知识点 canonical 化 ✅ 已实现
 
 风险最低、价值明确（修掉跨版本重复），且不抓任何新内容即可验证。
 
-1. 新增 `section_knowledge_point_links` 表（`create_all` 自动建）。
-2. 数据迁移（参考 [migrations.py](../mathscout/db/migrations.py) 的 `_ensure_*` 幂等风格）：
-   - 为每条现有 `knowledge_points` 按其 `section_id` 生成一条 link
-     （`relation_type=introduce`）。
-   - 把 `knowledge_points.semantic_key` 重算为**基于内容**的键（去掉 series/section
-     作用域），并**合并**因此重复的 KP（保留一条 canonical，多余的 link 改指向它）。
-3. 改 [template.py](../mathscout/importers/template.py)：导入时写 link 表，KP 用内容键
-   去重（同一知识点在多版本只建一条）。
-4. 改读取方：admin 知识库页、`extract.py` 里 `_link_method_to_section` 的下游、
-   任何 `knowledge_points.section_id` 的查询，改走 link 表。
-5. 停用 `section_id`（保留物理列或整表重建，见 §3.1 注）。
+1. ✅ 新增 `section_knowledge_point_links` 表（`create_all` 自动建）。
+2. ✅ 一次性迁移 `migrations._canonicalize_knowledge_points`（以"旧 `section_id` 列
+   是否存在"为幂等开关）：
+   - 按旧 `section_id` 为每条知识点回填一条 link（`relation_type=introduce`，原生 SQL）。
+   - 先删索引再 `ALTER TABLE ... DROP COLUMN section_id`。
+   - 把 `semantic_key` 重算为**基于内容**的键（规范化标题），并**合并**因此重复的 KP
+     （保留一条 canonical，多余的小节/方法 link 改指向它后删除）。
+3. ✅ 改 [template.py](../mathscout/importers/template.py)：按内容键全局去重，写 link 表。
+4. ✅ 改读取方：admin 知识库页两处 join、`extract.py` 的
+   `_link_knowledge_points_in_section` / `_link_by_text_match` 改走 link 表。
 
-**验收**：导入两个版本的模板后，共有知识点只占一条 canonical 记录，且分别通过 link
-关联到各自版本的小节。
+**验收（已通过）**：导入北师大版 6 册后，425 条原始知识点去重为 **417 条 canonical** +
+**425 条覆盖 link**——8 个跨小节/跨册重复的知识点各自合并为一条、覆盖多个小节。
+单测：`test_migrations`（迁移：回填/DROP/合并/幂等）、`test_template_shape`（导入 canonical
+化 + 幂等）、`test_extract_mapping`（方法→知识点映射改走 link 表）。
+
+> 注：纯标题去重偶尔会把同名异义判定合并（如 SAS 既是全等判定也是相似判定）。这类可由
+> 人工"拆分"修正；去重粒度仍是 §8 的开放项。
 
 ### Phase B — 技巧 / 解答概念澄清（几乎不动表）
 

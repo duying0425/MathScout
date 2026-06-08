@@ -23,6 +23,7 @@ from mathscout.db.models import (
     ReconciliationDecision,
     ReviewStatus,
     Section,
+    SectionKnowledgePointLink,
     SourceDocument,
     TeachingMethod,
     TeachingMethodVariant,
@@ -328,7 +329,12 @@ class ExtractPipeline:
         if not titles:
             return
         for point in self.session.scalars(
-            select(KnowledgePoint).where(KnowledgePoint.section_id == section.id)
+            select(KnowledgePoint)
+            .join(
+                SectionKnowledgePointLink,
+                SectionKnowledgePointLink.knowledge_point_id == KnowledgePoint.id,
+            )
+            .where(SectionKnowledgePointLink.section_id == section.id)
         ).all():
             if point.title in titles:
                 self._link_knowledge_point(
@@ -346,9 +352,15 @@ class ExtractPipeline:
                 self._link_knowledge_point(
                     method, point, self.settings.evidence_default_confidence
                 )
-                section = self.session.get(Section, point.section_id)
-                if section is not None:
-                    self._link_section(method, section, "inferred_from_knowledge_point")
+                # 知识点已 canonical 化，可被多个小节覆盖：把方法链接到其覆盖的小节。
+                for section_id in self.session.scalars(
+                    select(SectionKnowledgePointLink.section_id).where(
+                        SectionKnowledgePointLink.knowledge_point_id == point.id
+                    )
+                ).all():
+                    section = self.session.get(Section, section_id)
+                    if section is not None:
+                        self._link_section(method, section, "inferred_from_knowledge_point")
                 linked += 1
                 if linked >= 3:
                     break
