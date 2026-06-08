@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     )
     ai_max_text_chars: int = Field(default=12000, alias="AI_MAX_TEXT_CHARS")
 
+    # 抽取阶段置信度：证据/兜底文本匹配用较低值，命中候选自身教材字段用较高值。
+    evidence_default_confidence: float = Field(default=0.55, alias="EVIDENCE_DEFAULT_CONFIDENCE")
+    extraction_match_confidence: float = Field(default=0.75, alias="EXTRACTION_MATCH_CONFIDENCE")
+
     # 文档转换 / OCR：扫描版 PDF 与图片走 Azure 文档智能。留空则不启用 OCR，
     # 相关文档会被标记为 needs_ocr，等待人工处理或后续配置。
     azure_doc_intel_endpoint: str | None = Field(default=None, alias="AZURE_DOC_INTEL_ENDPOINT")

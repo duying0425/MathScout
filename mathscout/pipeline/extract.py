@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 
 from mathscout.config import get_settings
 from mathscout.db.models import (
+    Book,
     CandidateItemType,
     CandidateKnowledgeItem,
+    Chapter,
     CrawlStatus,
     EvidenceSnippet,
     ExtractionRun,
@@ -199,7 +201,11 @@ class ExtractPipeline:
         return rule_result.candidates, None
 
     def _create_evidence(self, document: SourceDocument, snippet: str) -> EvidenceSnippet:
-        evidence = EvidenceSnippet(document_id=document.id, text=snippet, confidence=0.55)
+        evidence = EvidenceSnippet(
+            document_id=document.id,
+            text=snippet,
+            confidence=self.settings.evidence_default_confidence,
+        )
         self.session.add(evidence)
         self.session.flush()
         return evidence
@@ -280,42 +286,113 @@ class ExtractPipeline:
     def _link_method_to_section(
         self, method: TeachingMethod, candidate: CandidateKnowledgeItem
     ) -> None:
+        """把方法映射到教材小节与知识点。
+
+        优先用候选自身抽取出的 book_code/chapter_title/section_title 精确定位小节
+        （高置信度）；定位不到时再退回"知识点标题子串匹配"的兜底逻辑（低置信度，
+        且最多链接前若干个，而非只取第一个）。
+        """
+        section = self._find_section_for_candidate(candidate)
+        if section is not None:
+            self._link_section(method, section, "matched_from_candidate_fields")
+            self._link_knowledge_points_in_section(method, candidate, section)
+            return
+        self._link_by_text_match(method, candidate)
+
+    def _find_section_for_candidate(self, candidate: CandidateKnowledgeItem) -> Section | None:
+        section_title = (candidate.section_title or "").strip()
+        if not section_title:
+            return None
+        stmt = (
+            select(Section)
+            .join(Chapter, Section.chapter_id == Chapter.id)
+            .join(Book, Chapter.book_id == Book.id)
+        )
+        book_code = (candidate.book_code or "").strip()
+        if book_code:
+            stmt = stmt.where(Book.book_code == book_code)
+        chapter_title = (candidate.chapter_title or "").strip()
+        if chapter_title:
+            stmt = stmt.where(Chapter.title == chapter_title)
+        exact = self.session.scalar(stmt.where(Section.title == section_title))
+        if exact is not None:
+            return exact
+        return self.session.scalar(stmt.where(Section.title.contains(section_title)))
+
+    def _link_knowledge_points_in_section(
+        self, method: TeachingMethod, candidate: CandidateKnowledgeItem, section: Section
+    ) -> None:
+        payload = candidate.payload or {}
+        raw_titles = payload.get("knowledge_point_titles") or []
+        titles = {t.strip() for t in raw_titles if t and t.strip()}
+        if not titles:
+            return
+        for point in self.session.scalars(
+            select(KnowledgePoint).where(KnowledgePoint.section_id == section.id)
+        ).all():
+            if point.title in titles:
+                self._link_knowledge_point(
+                    method, point, self.settings.extraction_match_confidence
+                )
+
+    def _link_by_text_match(
+        self, method: TeachingMethod, candidate: CandidateKnowledgeItem
+    ) -> None:
         payload = candidate.payload or {}
         text = f"{candidate.title} {payload.get('summary', '')}"
+        linked = 0
         for point in self.session.scalars(select(KnowledgePoint)).all():
             if len(point.title) >= 3 and point.title in text:
-                if not self.session.scalar(
-                    select(MethodKnowledgePointLink).where(
-                        MethodKnowledgePointLink.method_id == method.id,
-                        MethodKnowledgePointLink.knowledge_point_id == point.id,
-                        MethodKnowledgePointLink.relation_type == "primary",
-                    )
-                ):
-                    self.session.add(
-                        MethodKnowledgePointLink(
-                            method_id=method.id,
-                            knowledge_point_id=point.id,
-                            relation_type="primary",
-                            confidence=0.55,
-                        )
-                    )
+                self._link_knowledge_point(
+                    method, point, self.settings.evidence_default_confidence
+                )
                 section = self.session.get(Section, point.section_id)
-                if section and not self.session.scalar(
-                    select(MethodSectionLink).where(
-                        MethodSectionLink.method_id == method.id,
-                        MethodSectionLink.section_id == section.id,
-                        MethodSectionLink.relation_type == "inferred_from_knowledge_point",
-                    )
-                ):
-                    self.session.add(
-                        MethodSectionLink(
-                            method_id=method.id,
-                            section_id=section.id,
-                            relation_type="inferred_from_knowledge_point",
-                            confidence=0.55,
-                        )
-                    )
-                break
+                if section is not None:
+                    self._link_section(method, section, "inferred_from_knowledge_point")
+                linked += 1
+                if linked >= 3:
+                    break
+
+    def _link_knowledge_point(
+        self, method: TeachingMethod, point: KnowledgePoint, confidence: float
+    ) -> None:
+        if self.session.scalar(
+            select(MethodKnowledgePointLink).where(
+                MethodKnowledgePointLink.method_id == method.id,
+                MethodKnowledgePointLink.knowledge_point_id == point.id,
+            )
+        ):
+            return
+        self.session.add(
+            MethodKnowledgePointLink(
+                method_id=method.id,
+                knowledge_point_id=point.id,
+                relation_type="primary",
+                confidence=confidence,
+            )
+        )
+
+    def _link_section(self, method: TeachingMethod, section: Section, relation: str) -> None:
+        confidence = (
+            self.settings.extraction_match_confidence
+            if relation == "matched_from_candidate_fields"
+            else self.settings.evidence_default_confidence
+        )
+        if self.session.scalar(
+            select(MethodSectionLink).where(
+                MethodSectionLink.method_id == method.id,
+                MethodSectionLink.section_id == section.id,
+            )
+        ):
+            return
+        self.session.add(
+            MethodSectionLink(
+                method_id=method.id,
+                section_id=section.id,
+                relation_type=relation,
+                confidence=confidence,
+            )
+        )
 
     def _record_reconciliation(
         self,
