@@ -87,12 +87,61 @@
       td button:hover {
         background: #25467c;
       }
+
+      .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .filter-bar a {
+        background: #fff;
+        border: 1px solid #d9dee8;
+        border-radius: 999px;
+        color: #315c9f;
+        font-size: 13px;
+        padding: 5px 12px;
+      }
+
+      .filter-bar a.active {
+        background: #234f8c;
+        border-color: #234f8c;
+        color: #fff;
+      }
+
+      .bulk-action {
+        margin-bottom: 14px;
+      }
+
+      .bulk-action button {
+        background: #b45309;
+        border: 0;
+        border-radius: 6px;
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        padding: 8px 14px;
+      }
     </style>
   </head>
   <body>
     {% set page_title = title %}
     {% include "admin/_header.html" %}
     <main>
+      {% if filters %}
+        <nav class="filter-bar" aria-label="筛选">
+          {% for f in filters %}
+            <a class="{{ 'active' if f.active else '' }}" href="{{ f.url }}">{{ f.label }}</a>
+          {% endfor %}
+        </nav>
+      {% endif %}
+      {% if bulk_action %}
+        <form method="post" action="{{ bulk_action.url }}" class="bulk-action">
+          <button type="submit">{{ bulk_action.label }}</button>
+        </form>
+      {% endif %}
       {% if rows %}
         <section class="table-wrap" aria-label="{{ title }}">
           <table>

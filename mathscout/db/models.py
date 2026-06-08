@@ -154,6 +154,8 @@ class SourceDocument(Base):
         Enum(PipelineStatus), index=True, nullable=True
     )
     pipeline_error: Mapped[str | None] = mapped_column(Text)
+    # 识别出的文档类型（DocumentKind 值，如 html/pdf_digital/word/...），供后台展示与排查。
+    document_kind: Mapped[str | None] = mapped_column(String(32))
 
     site: Mapped[SourceSite | None] = relationship(back_populates="documents")
     evidence_snippets: Mapped[list[EvidenceSnippet]] = relationship(back_populates="document")

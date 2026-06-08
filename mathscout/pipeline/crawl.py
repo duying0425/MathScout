@@ -76,6 +76,7 @@ class CrawlPipeline:
             needs_login=result.needs_login,
             pipeline_status=pipeline_status,
             pipeline_error=pipeline_error,
+            document_kind=kind.value,
         )
         self.session.commit()
         return {
@@ -147,6 +148,7 @@ class CrawlPipeline:
         needs_login: bool,
         pipeline_status: PipelineStatus,
         pipeline_error: str | None = None,
+        document_kind: str | None = None,
     ) -> SourceDocument:
         document = self.session.scalar(
             select(SourceDocument).where(
@@ -167,6 +169,7 @@ class CrawlPipeline:
         document.text_path = str(text_path)
         document.pipeline_status = pipeline_status
         document.pipeline_error = pipeline_error
+        document.document_kind = document_kind
         document.fetched_at = datetime.utcnow()
         self.session.flush()
         return document

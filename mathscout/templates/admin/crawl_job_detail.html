@@ -271,6 +271,7 @@
               <thead>
                 <tr>
                   <th>URL</th>
+                  <th>类型</th>
                   <th>HTTP</th>
                   <th>登录</th>
                   <th>流程状态</th>
@@ -282,6 +283,7 @@
                 {% for document in documents %}
                   <tr>
                     <td>{{ document.url }}</td>
+                    <td>{{ document.kind }}</td>
                     <td>{{ document.http_status }}</td>
                     <td>{{ document.login }}</td>
                     <td>{{ document.pipeline_status }}</td>

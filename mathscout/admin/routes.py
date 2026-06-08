@@ -38,6 +38,7 @@ from mathscout.db.models import (
 )
 from mathscout.db.session import SessionLocal, get_session
 from mathscout.orchestration.schemas import NaturalLanguageDirective, OrchestrationContext
+from mathscout.parsers.attachments import is_attachment_url
 from mathscout.pipeline.extract import ExtractPipeline
 from mathscout.pipeline.jobs import CrawlJobRunner
 from mathscout.review import ReviewActionError, ReviewService
@@ -495,6 +496,7 @@ def crawl_job_detail(job_id: str, request: Request, session: AdminSession):
     document_rows = [
         {
             "url": document.url,
+            "kind": _display_document_kind(document.document_kind),
             "http_status": _display(document.http_status),
             "login": "是" if document.needs_login else "否",
             "pipeline_status": _display_pipeline_status(document.pipeline_status),
@@ -585,34 +587,97 @@ def cancel_crawl_job(job_id: str, session: AdminSession):
 
 
 @router.get("/documents")
-def documents(request: Request, session: AdminSession):
+def documents(request: Request, session: AdminSession, status: str = ""):
     from mathscout.db.models import PipelineStatus
 
+    retryable = {
+        PipelineStatus.failed,
+        PipelineStatus.login_required,
+        PipelineStatus.needs_ocr,
+    }
+    status_filter = _parse_pipeline_status(status)
+    stmt = select(SourceDocument).order_by(SourceDocument.created_at.desc())
+    if status_filter is not None:
+        stmt = stmt.where(SourceDocument.pipeline_status == status_filter)
     rows = [
         {
             "URL": document.url,
-            "状态": _display(document.status),
+            "类型": _display_document_kind(document.document_kind),
+            "处理": _display_pipeline_status(document.pipeline_status),
+            "附件": "是" if is_attachment_url(document.url) else "否",
             "HTTP": _display(document.http_status),
-            "登录": "是" if document.needs_login else "否",
             "抓取时间": _display(document.fetched_at),
             "_actions": (
                 [{"label": "重新抓取", "url": f"/admin/documents/{document.id}/retry"}]
-                if document.pipeline_status
-                in {PipelineStatus.failed, PipelineStatus.login_required, PipelineStatus.needs_ocr}
+                if document.pipeline_status in retryable
                 else []
             ),
         }
-        for document in session.scalars(
-            select(SourceDocument).order_by(SourceDocument.created_at.desc()).limit(100)
-        ).all()
+        for document in session.scalars(stmt.limit(100)).all()
     ]
+    needs_ocr_count = session.scalar(
+        select(func.count(SourceDocument.id)).where(
+            SourceDocument.pipeline_status == PipelineStatus.needs_ocr
+        )
+    ) or 0
+    filters = [
+        {"label": "全部", "url": "/admin/documents", "active": not status},
+        {
+            "label": "待提取",
+            "url": "/admin/documents?status=crawled",
+            "active": status == "crawled",
+        },
+        {
+            "label": f"待 OCR（{needs_ocr_count}）",
+            "url": "/admin/documents?status=needs_ocr",
+            "active": status == "needs_ocr",
+        },
+        {"label": "失败", "url": "/admin/documents?status=failed", "active": status == "failed"},
+        {
+            "label": "需登录",
+            "url": "/admin/documents?status=login_required",
+            "active": status == "login_required",
+        },
+    ]
+    bulk_action = None
+    if status == "needs_ocr" and needs_ocr_count:
+        bulk_action = {
+            "label": f"批量重新抓取全部待 OCR 文档（{needs_ocr_count}）",
+            "url": "/admin/documents/recrawl-needs-ocr",
+        }
     return _list_response(
         request=request,
         title="已抓文档",
-        columns=["URL", "状态", "HTTP", "登录", "抓取时间"],
+        columns=["URL", "类型", "处理", "附件", "HTTP", "抓取时间"],
         rows=rows,
         actions_enabled=True,
+        filters=filters,
+        bulk_action=bulk_action,
     )
+
+
+@router.post("/documents/recrawl-needs-ocr")
+def recrawl_needs_ocr(background_tasks: BackgroundTasks, session: AdminSession):
+    from mathscout.db.models import PipelineStatus
+
+    urls = list(
+        {
+            url
+            for (url,) in session.execute(
+                select(SourceDocument.url).where(
+                    SourceDocument.pipeline_status == PipelineStatus.needs_ocr
+                )
+            ).all()
+            if url
+        }
+    )
+    if not urls:
+        return _redirect("/admin/documents?status=needs_ocr")
+    name = f"重抓待 OCR {datetime.utcnow().strftime('%m-%d %H:%M')}"
+    result = CrawlJobRunner(session).create_job(name, urls, discover_links=False)
+    session.commit()
+    background_tasks.add_task(_run_crawl_job_background, result["job_id"])
+    return _redirect(f"/admin/crawl-jobs/{result['job_id']}")
 
 
 @router.post("/documents/{document_id}/retry")
@@ -1015,6 +1080,34 @@ def _interpret_command(objective: str, urls: list[str], extractor_mode: str) -> 
     )
 
 
+def _display_document_kind(value: Any) -> str:
+    if not value:
+        return "-"
+    return {
+        "html": "网页",
+        "pdf_digital": "PDF（数字版）",
+        "pdf_scanned": "PDF（扫描版）",
+        "word": "Word",
+        "powerpoint": "PPT",
+        "excel": "Excel",
+        "image": "图片",
+        "text": "文本",
+        "archive": "压缩包",
+        "unknown": "未知",
+    }.get(str(value), str(value))
+
+
+def _parse_pipeline_status(value: str):
+    from mathscout.db.models import PipelineStatus
+
+    if not value:
+        return None
+    try:
+        return PipelineStatus(value)
+    except ValueError:
+        return None
+
+
 def _job_rows(session: Session, statement) -> list[dict[str, Any]]:
     return [_job_row(session, job) for job in session.scalars(statement).all()]
 
@@ -1258,6 +1351,8 @@ def _list_response(
     columns: list[str],
     rows: list[dict[str, Any]],
     actions_enabled: bool = False,
+    filters: list[dict[str, Any]] | None = None,
+    bulk_action: dict[str, str] | None = None,
 ):
     return templates.TemplateResponse(
         request=request,
@@ -1267,6 +1362,8 @@ def _list_response(
             "columns": columns,
             "rows": rows,
             "actions_enabled": actions_enabled,
+            "filters": filters or [],
+            "bulk_action": bulk_action,
         },
     )
 
