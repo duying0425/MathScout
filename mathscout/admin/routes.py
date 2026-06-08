@@ -1268,6 +1268,8 @@ def _task_note(task: CrawlTask) -> str:
             return "发现完成，但没有生成抓取任务。"
     if result.get("status") == "blocked_login":
         return "页面需要登录，已阻塞。"
+    if result.get("status") == "blocked_robots":
+        return "robots.txt 禁止抓取该页面，已跳过。"
     error = result.get("error")
     if error:
         return _truncate(str(error), 160)

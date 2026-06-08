@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     default_user_agent: str = "MathScout/0.1 (+local research crawler)"
     crawl_default_delay_seconds: int = 3
     crawl_max_concurrency: int = 4
+    # 是否遵守目标站点的 robots.txt（按域缓存；拉取失败时 fail-open 放行）。
+    respect_robots: bool = Field(default=True, alias="RESPECT_ROBOTS")
     ai_provider: str = Field(default="rule", alias="AI_PROVIDER")
     deepseek_api_key: str | None = Field(default=None, alias="DEEPSEEK_API_KEY")
     openai_compatible_api_key: str | None = Field(

@@ -7,12 +7,16 @@ from fastapi.responses import ORJSONResponse
 from mathscout.admin.routes import router as admin_router
 from mathscout.api.routes import router as api_router
 from mathscout.db.migrations import ensure_database_schema
-from mathscout.db.session import engine
+from mathscout.db.session import SessionLocal, engine
+from mathscout.pipeline.jobs import reset_stale_jobs
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     ensure_database_schema(engine)
+    # 进程重启后，把上次残留的 running 作业/任务重置为可恢复状态。
+    with SessionLocal() as session:
+        reset_stale_jobs(session)
     yield
 
 

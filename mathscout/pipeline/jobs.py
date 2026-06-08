@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from mathscout.agents.base import AgentStatus
 from mathscout.agents.source_discovery import SourceDiscoveryAgent
 from mathscout.config import get_settings
+from mathscout.crawler.robots import DomainRateLimiter, RobotsChecker
 from mathscout.db.models import (
     AgentDecision,
     AgentDecisionType,
@@ -31,6 +32,12 @@ class CrawlJobRunner:
     def __init__(self, session: Session) -> None:
         self.session = session
         self.settings = get_settings()
+        self.rate_limiter = DomainRateLimiter(self.settings.crawl_default_delay_seconds)
+        self.robots = (
+            RobotsChecker(self.settings.default_user_agent)
+            if self.settings.respect_robots
+            else None
+        )
 
     def create_job(self, name: str, urls: list[str], discover_links: bool = False) -> dict[str, str | int]:
         job = CrawlJob(
@@ -140,8 +147,19 @@ class CrawlJobRunner:
             task.updated_at = datetime.utcnow()
             self.session.commit()
 
+            # 合规护栏：robots.txt 禁止则跳过该任务（标记 blocked，不计为失败/重试）。
+            if self.robots is not None and not self.robots.allowed(task.url):
+                task.status = CrawlStatus.blocked
+                task.result_json = {"status": "blocked_robots", "url": task.url}
+                task.error = None
+                task.updated_at = datetime.utcnow()
+                self.session.commit()
+                continue
+
             task_id = task.id
             try:
+                # 按域限速：同一域名两次请求之间至少间隔 crawl_default_delay_seconds。
+                self.rate_limiter.wait(task.url)
                 if task.task_type == "discover_links":
                     result = self._run_discovery_task(job, task)
                     if result.get("status") == AgentStatus.failed.value:
@@ -405,6 +423,30 @@ class CrawlJobRunner:
         if counts.get(CrawlStatus.cancelled, 0):
             return CrawlStatus.cancelled
         return CrawlStatus.succeeded
+
+
+def reset_stale_jobs(session: Session) -> int:
+    """启动时重置上次进程残留的 running 作业/任务，便于恢复。
+
+    进程崩溃或 --reload 重启会留下状态卡在 running 的作业与任务。把这类作业置为
+    paused（可在后台再次「运行」恢复其余 pending 任务），把残留的 running 任务置回
+    pending。返回受影响的作业数。
+    """
+    running_jobs = session.scalars(
+        select(CrawlJob).where(CrawlJob.status == CrawlStatus.running)
+    ).all()
+    for job in running_jobs:
+        job.status = CrawlStatus.paused
+    running_tasks = session.scalars(
+        select(CrawlTask).where(CrawlTask.status == CrawlStatus.running)
+    ).all()
+    for task in running_tasks:
+        task.status = CrawlStatus.pending
+        task.error = "进程重启前残留的 running 状态，已重置为 pending。"
+        task.updated_at = datetime.utcnow()
+    if running_jobs or running_tasks:
+        session.commit()
+    return len(running_jobs)
 
 
 def _source_filter_uuid(job: CrawlJob, key: str) -> uuid.UUID | None:
