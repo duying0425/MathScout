@@ -60,6 +60,49 @@ class ExtractedRegionAdoption(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
 
+class ExtractedFigure(BaseModel):
+    figure_kind: Literal["image", "tikz"] = "image"
+    image_path: str | None = None
+    tikz_code: str | None = None
+    caption: str | None = None
+    origin: Literal["original", "ai_generated"] = "original"
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class ExtractedSolution(BaseModel):
+    approach_label: str | None = None
+    steps: list[str] = Field(default_factory=list)
+    final_answer: str | None = None
+    complexity: str | None = None
+    # 用到的解题技巧（按既有 canonical 技巧库匹配；匹配不到不新建，避免一题一技巧）
+    technique_titles: list[str] = Field(default_factory=list)
+    source_teacher: str | None = None
+    source_org: str | None = None
+    source_region: str | None = None
+    figures: list[ExtractedFigure] = Field(default_factory=list)
+    evidence: list[EvidenceRef] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class ExtractedProblem(BaseModel):
+    stem: str  # LaTeX / 含数学的 Markdown
+    problem_type: str | None = None
+    difficulty: str | None = None
+    source_type: str | None = None  # 课堂/试卷/教辅/题库
+    has_answer: bool = False
+    semantic_key: str | None = None
+    # 考察的知识点标题：AI 标注、低置信，强制进复核，不自动写 canonical 链接
+    knowledge_point_titles: list[str] = Field(default_factory=list)
+    textbook_series: str | None = None
+    book_code: str | None = None
+    chapter_title: str | None = None
+    section_title: str | None = None  # 弱关联线索
+    solutions: list[ExtractedSolution] = Field(default_factory=list)
+    figures: list[ExtractedFigure] = Field(default_factory=list)
+    evidence: list[EvidenceRef] = Field(default_factory=list)
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
 CandidateItemType = Literal[
     "knowledge_point",
     "teaching_method",
@@ -67,6 +110,8 @@ CandidateItemType = Literal[
     "student_skill",
     "region_adoption",
     "textbook_structure",
+    "problem",
+    "solution",
 ]
 
 ReconciliationAction = Literal["skip", "update", "create_variant", "create", "conflict", "review"]

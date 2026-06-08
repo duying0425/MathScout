@@ -262,12 +262,18 @@ semantic_key = normalize_semantic_key(f"{series.name}:{book.book_code}:{section.
 
 ### Phase C — 题目 + 解答抓取建模（高风险，**最后做，先小范围试点**）
 
+按切片推进（先确定性、可测的骨架，再接风险高的抓取/多模态/UI）：
+
 1. ~~建表~~：事实层 schema 已在 Phase B 建好；本期只接入**行为**。
-2. 摄取层加数学内容支持（LaTeX 抽取 + 图片附件 + 可选图片→TikZ）。
-3. 抽取层加 `ExtractedProblem` / `ExtractedSolution` + `CandidateItemType` 扩展。
-4. 候选 → 调和 → canonical 走现有管线；题目-知识点"考察"链接强制进复核。
-5. admin：题目库列表 + 题目详情页（渲染题干 / 解法列表 / 考察知识点 / 用到技巧）。
-6. 先用**一个**范围可控的题源打通端到端，质量达标再扩量。
+2. 📋 摄取层加数学内容支持（LaTeX 抽取 + 图片附件 + 可选图片→TikZ）。
+3. ✅ **抽取契约**：`ExtractedProblem` / `ExtractedSolution` / `ExtractedFigure` +
+   `CandidateItemType` 扩展（`problem` / `solution`）。
+4. ✅ **调和骨架**（`pipeline/problem_extract.ProblemReconciler`）：候选 → canonical
+   题目/解答/配图；题目↔小节软链接、解答↔**既有**技巧链接（匹配不到不新建）；
+   题目↔知识点"考察"**不自动写链接、改生成 ReviewItem 入复核**。
+5. 📋 真实抽取器（规则 / AI）：从清洗后的文本/题库产出 `ExtractedProblem`，喂给调和骨架。
+6. 📋 admin：题目库列表 + 题目详情页（渲染题干 / 解法列表 / 考察知识点 / 用到技巧）。
+7. 📋 先用**一个**范围可控的题源打通端到端，质量达标再扩量。
 
 ## 7. 已定的决策
 

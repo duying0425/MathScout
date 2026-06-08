@@ -28,7 +28,7 @@
 | robots.txt 校验 / 按域限速 | ✅ | 已接入 `CrawlJobRunner`，`RESPECT_ROBOTS` 开关 |
 | 启动重置僵尸 running 作业/任务 | ✅ | `reset_stale_jobs`（main 启动调用）|
 | 候选复核详情页 + 编辑（同步 canonical 方法）| ✅ | `/admin/review/candidates/<id>` |
-| 四维知识图谱重构（知识点 canonical 化 / 题目 / 解答 / 技巧）| 🚧 | **Phase A（知识点 canonical 化）+ B（题目/解答事实层 schema）已实现**；C（抓取/抽取/UI）规划中。见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md) |
+| 四维知识图谱重构（知识点 canonical 化 / 题目 / 解答 / 技巧）| 🚧 | **A（知识点 canonical 化）+ B（题目/解答 schema）+ C 抽取契约/调和骨架已实现**；C 的真实抽取器/数学摄取/题目库 UI 规划中。见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md) |
 | PostgreSQL + Alembic + pgvector | 📋 | 当前仅 SQLite + 手写迁移 |
 | 独立 worker / 并发编排 | 📋 | 当前用 FastAPI `BackgroundTasks` |
 | 方法库编辑表单、合并/拆分、检索过滤 | 🚧 | 候选已可编辑；canonical 方法的独立编辑/合并仍待补 |
@@ -389,9 +389,9 @@ FastAPI/Jinja 页面已经够用。
   `section_knowledge_point_links`；`semantic_key` 改基于内容。北师大 6 册 425→417 canonical。
 - **Phase B — 技巧/解答概念澄清 + 事实层 schema** ✅：抽取 prompt 明确"解答 ≠ 技巧"；
   建出 `problems` / `solutions` / `figures` + 3 张链接表（空表、外键自洽）；`teaching_methods` 不动。
-- **Phase C — 题目 + 解答**：建 `problems` / `solutions` / `figures` 与考察/弱关联链接；
-  摄取层加 LaTeX + 图片 + 可选图片→TikZ；抽取加 `ExtractedProblem` / `ExtractedSolution`。
-  高风险，**最后做、先小范围试点**。
+- **Phase C — 题目 + 解答** 🚧：抽取契约（`ExtractedProblem`/`ExtractedSolution`）+ 调和
+  骨架（`ProblemReconciler`：候选→canonical，KP 考察入复核）已实现；待做：真实抽取器、
+  摄取层 LaTeX + 图片 + 可选图片→TikZ、题目库 UI。高风险，**先小范围试点**。
 
 ## 11. 待定决策
 

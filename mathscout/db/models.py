@@ -66,6 +66,8 @@ class CandidateItemType(StrEnum):
     student_skill = "student_skill"
     region_adoption = "region_adoption"
     textbook_structure = "textbook_structure"
+    problem = "problem"
+    solution = "solution"
 
 
 class ReconciliationAction(StrEnum):

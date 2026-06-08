@@ -2,7 +2,29 @@
 
 最近更新：2026-06-08。
 
-## 本次更新（2026-06-08）— Phase B 实现：题目/解答事实层 schema + 技巧概念澄清
+## 本次更新（2026-06-08）— Phase C 切片 1：题目抽取契约 + 调和骨架
+
+四维知识图谱重构第三期，按切片推进（先确定性、可测的骨架；高风险的真实抓取/多模态
+TikZ/UI 留后续切片）。本切片只接**离线、确定性**的调和骨架，不碰网络与多模态。
+
+- **抽取契约**（`extraction/schemas.py`）：新增 `ExtractedProblem` / `ExtractedSolution` /
+  `ExtractedFigure`；`CandidateItemType` 扩展 `problem` / `solution`（pydantic Literal +
+  `db/models.py` 枚举）。
+- **调和骨架**（`pipeline/problem_extract.ProblemReconciler`）：把 `ExtractedProblem` 调和进
+  canonical 事实层，复用"候选 → reconciliation → canonical"三段式：
+  - 题目按 `semantic_key` 去重（重复则 `source_count++`）；解答按思路/步骤去重；配图按
+    多态归属落库。
+  - **题目↔小节**：能从教材线索定位到小节就建软链接（弱关联）。
+  - **解答↔技巧**：只链接到**已有** canonical 技巧（按语义键匹配），匹配不到**不新建**，
+    避免一题一技巧污染技巧库。
+  - **题目↔知识点（考察）**：AI 标注置信度低，**不自动写链接**，改生成一条
+    `ReviewItem`（`item_type=problem_knowledge_point`，含已匹配的知识点 id）入复核。
+- **验证**：`ruff` 干净（4 个 E501 为既有）；`pytest` 38 全过（新增 `test_problem_reconcile`：
+  创建/链接/复核门控、去重 + 忽略未知技巧两用例）。
+- **下一步**：真实抽取器（规则/AI 从清洗文本产出 `ExtractedProblem`）、摄取层数学内容
+  （LaTeX + 图片 + 可选图片→TikZ）、题目库 UI；再小范围试点打通端到端。
+
+## 此前更新（2026-06-08）— Phase B 实现：题目/解答事实层 schema + 技巧概念澄清
 
 四维知识图谱重构第二期。把题目/解答这一 canonical 事实层的**完整 schema 建出来**
 （空表、外键自洽），并澄清"解答 ≠ 技巧"，为 Phase C（抓取/抽取/UI）铺路。
