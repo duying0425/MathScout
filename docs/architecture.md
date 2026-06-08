@@ -28,6 +28,7 @@
 | robots.txt 校验 / 按域限速 | ✅ | 已接入 `CrawlJobRunner`，`RESPECT_ROBOTS` 开关 |
 | 启动重置僵尸 running 作业/任务 | ✅ | `reset_stale_jobs`（main 启动调用）|
 | 候选复核详情页 + 编辑（同步 canonical 方法）| ✅ | `/admin/review/candidates/<id>` |
+| 四维知识图谱重构（知识点 canonical 化 / 题目 / 解答 / 技巧）| 📋 | 设计已定稿，开发待启动，见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md) |
 | PostgreSQL + Alembic + pgvector | 📋 | 当前仅 SQLite + 手写迁移 |
 | 独立 worker / 并发编排 | 📋 | 当前用 FastAPI `BackgroundTasks` |
 | 方法库编辑表单、合并/拆分、检索过滤 | 🚧 | 候选已可编辑；canonical 方法的独立编辑/合并仍待补 |
@@ -37,6 +38,12 @@
 MathScout 的定位是**由 AI 辅助维护的教学知识库系统**，而不只是爬虫。抓取只是输入层，
 产品的核心是收集、保留并组织多样的教师方法知识。知识点与教材结构提供索引框架，
 但系统应当为"收集与保留不同教师的解题/教学经验"而优化。
+
+> 🔭 **范围正在升级为"四维知识图谱"**：教材/章/节（版本相关，仅决定顺序）、知识点
+> （版本无关、canonical）、题目（版本无关、弱关联小节）、解题技巧/模型（跨题复用）。
+> 核心原则是**教材是视图、知识点与题目才是稳定事实**。完整设计、迁移与分期实施见
+> [knowledge-graph-redesign.md](knowledge-graph-redesign.md)。下文描述的是当前的
+> "方法为核心"形态，将逐步演进到四维模型。
 
 规范化的知识图谱应包含：
 
@@ -144,6 +151,12 @@ MathScout 的**愿景**是 AI 主导的编排模式：
 **不绕过验证码、付费墙或访问控制**。
 
 ## 4. 数据模型
+
+> 本节为**当前实现**的表。目标"四维知识图谱"模型（知识点 / 题目 canonical 化、
+> 新增 `problems` / `solutions` / `figures` 与若干链接表、用
+> `section_knowledge_point_links` 替代 `knowledge_points.section_id` 硬绑定）见
+> [data-model.md §目标模型](data-model.md) 与
+> [knowledge-graph-redesign.md](knowledge-graph-redesign.md)。
 
 核心表：
 
@@ -370,10 +383,23 @@ FastAPI/Jinja 页面已经够用。
 按域分组的并发 worker；方法与例题的向量检索；增量重抓与新鲜度检查；按版本/章的
 质量报告；基于质量快照与人工自然语言反馈的 AI 自适应策略。
 
+### 四维知识图谱重构 📋（与上述阶段并行推进，见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md)）
+
+- **Phase A — 知识点 canonical 化**：移除 `section_id` 硬绑定，改用
+  `section_knowledge_point_links`；`semantic_key` 改基于内容。风险最低、不依赖抓题目，**先做**。
+- **Phase B — 技巧/解答概念澄清**：明确"解答 ≠ 技巧"；建 `solutions` /
+  `solution_technique_links` 空表铺路；`teaching_methods` 不动。
+- **Phase C — 题目 + 解答**：建 `problems` / `solutions` / `figures` 与考察/弱关联链接；
+  摄取层加 LaTeX + 图片 + 可选图片→TikZ；抽取加 `ExtractedProblem` / `ExtractedSolution`。
+  高风险，**最后做、先小范围试点**。
+
 ## 11. 待定决策
 
 - 北师大版之后优先做哪些教材版本？
 - embedding 存在主 PostgreSQL（pgvector）还是独立向量库？
 - 登录来源是仅限私有研究，还是可贡献到共享发布的摘要？
-- 例题与题面应逐字存储、改写，还是仅作抽取方法的证据？
+- ~~例题与题面应逐字存储、改写，还是仅作抽取方法的证据？~~ **已定**：升级为独立的
+  `problems` / `solutions` 实体，题干存 LaTeX、可含答案（目标为内部数据库，无版权问题；
+  对外发布场景仍受 §9 合规约束）。见 [knowledge-graph-redesign.md §7](knowledge-graph-redesign.md)。
 - 早期哪些动作可由 AI 自动应用，哪些必须保持"仅复核"，直到积累足够审计数据？
+- 题目去重粒度（完全同题 vs 同题异形）与图片→TikZ 走哪条 AI 通道。

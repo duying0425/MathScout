@@ -4,6 +4,16 @@
 MathScout is an AI-managed knowledge-base maintenance system for Chinese math education.
 It crawls teaching resources, uses AI to extract teaching methods, and maintains a curated knowledge base.
 
+**Scope is being upgraded to a 4-dimension knowledge graph** (design locked, build pending — see
+[docs/knowledge-graph-redesign.md](docs/knowledge-graph-redesign.md)):
+- **Textbook / chapter / section** — version-dependent; only decides teaching order & selection.
+- **Knowledge points** — version-independent, canonical (shared across all textbook versions).
+- **Problems** (题目) — version-independent, weakly linked to sections; LaTeX stems, optional answers/figures.
+- **Solving techniques** (解题技巧/模型, = `teaching_methods`) — reusable across problems.
+
+Guiding principle: **textbooks are views; knowledge points and problems are the stable facts.**
+A solution (解答) is problem-specific and is NOT the same as a technique (reusable model).
+
 ## Architecture: 3-Phase Pipeline
 
 ```
@@ -64,3 +74,4 @@ Each phase is independently re-runnable. `pipeline_status` on `source_documents`
 - `cards` variable removed from dashboard route — was dead code.
 - `pipeline_status` enum: `crawled | extracted | done | failed | login_required | needs_ocr` (`needs_ocr` = scanned PDF/image awaiting OCR when Azure Document Intelligence is not configured)
 - Scrapling `Response.body` always returns `bytes`; no need for `isinstance(raw, str)` check.
+- **Knowledge-graph redesign (in progress):** `knowledge_points` is being decoupled from a single `section` (drop the `section_id` hard binding → `section_knowledge_point_links` M:N; `semantic_key` becomes content-based so the same KP dedups across textbook versions). New tables `problems` / `solutions` / `figures` + link tables; `CandidateItemType` gains `problem` / `solution`. Build order: **Phase A (KP canonical-ization) first** — lowest risk, independent of crawling problems. Full plan: [docs/knowledge-graph-redesign.md](docs/knowledge-graph-redesign.md).

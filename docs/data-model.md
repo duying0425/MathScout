@@ -2,6 +2,11 @@
 
 本文概述规范化 schema。SQLAlchemy 模型位于 `mathscout/db/models.py`。
 
+> ⚠️ **正在重构为"四维知识图谱"。** 下方"Canonical 教育表"描述的是**当前实现**
+> （知识点硬挂在单个小节下）。目标模型——知识点 / 题目 canonical 化、新增题目与解答、
+> 用链接表替代硬绑定——见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md)，
+> 并在本文 [§目标模型](#目标模型四维知识图谱) 概览。
+
 ## Canonical 教育表
 
 - `textbook_series`
@@ -105,3 +110,41 @@
 - 人工主要通过 `natural_language_commands`、看板与复核队列交互；编排器把方向翻译成结构化计划
 - AI 执行必须可通过 `agent_decisions` 审计、可通过 `quality_snapshots` 度量
 - 人工变更必须可通过 `manual_edit_logs` 审计；AI 调和在决定 跳过/更新/请求复核 时应参考这些日志
+
+## 目标模型（四维知识图谱）
+
+> 完整设计、字段清单、迁移与分期实施见
+> [knowledge-graph-redesign.md](knowledge-graph-redesign.md)。此处只给概览。
+
+把覆盖范围升级为四个维度：
+
+| 维度 | 实体 | 与教材版本的关系 |
+|------|------|------------------|
+| 教材 / 章 / 节 | `textbook_series`→`books`→`chapters`→`sections` | **版本相关**：只决定顺序与选材 |
+| 知识点 | `knowledge_points`（改造为 canonical）| **版本无关**：跨版本唯一、共享 |
+| 题目 | `problems`（新增）| **版本无关**：弱关联到小节 |
+| 解题技巧 / 模型 | `teaching_methods`（沿用）| **版本无关**：跨题复用 |
+
+### 关键变化
+
+1. **知识点 canonical 化**：移除 `knowledge_points.section_id` 硬绑定，改用
+   `section_knowledge_point_links`（M:N，带 `relation_type` introduce/reinforce/extend）；
+   `semantic_key` 改为**基于内容**，使同一知识点在多版本只存一条。
+2. **新增题目 `problems`**：题干为 LaTeX，含题型 / 难度 / 来源类别 / 是否含答案；
+   通过 `problem_knowledge_point_links`（"考察"）与 `problem_section_links`（弱关联）连接。
+3. **新增解答 `solutions`**：一题多解；通过 `solution_technique_links` 关联到所用技巧
+   （= `teaching_methods`）。**解答 ≠ 技巧**：解答是题目专属，技巧是跨题复用模型。
+4. **新增 `figures`**：题干 / 解步配图，存原图路径与可选的 AI 生成 TikZ 源码。
+5. **候选 / 调和 / 复核管线全部复用**：题目与解答走现有
+   `candidate → reconciliation → canonical` 三段式；题目↔知识点"考察"链接强制进复核。
+
+### 新增 / 改造的表一览
+
+- 改造：`knowledge_points`（去 section 绑定 + 内容键去重）
+- 新增 canonical：`problems`、`solutions`、`figures`
+- 新增链接：`section_knowledge_point_links`、`problem_knowledge_point_links`、
+  `problem_section_links`、`solution_technique_links`
+- 沿用：`teaching_methods`（= 技巧）、`teaching_method_variants`、
+  `method_section_links`、`method_knowledge_point_links`
+- 抽取：`CandidateItemType` 增加 `problem` / `solution`；新增
+  `ExtractedProblem` / `ExtractedSolution`

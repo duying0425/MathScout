@@ -99,6 +99,28 @@ pip install -e ".[ocr]"
 DOWNLOAD_ATTACHMENTS=true
 ```
 
+## 5. 数学内容（LaTeX / 图片 / TikZ）📋 规划
+
+> 配合"四维知识图谱"重构的 **Phase C（题目 + 解答）**，见
+> [knowledge-graph-redesign.md](knowledge-graph-redesign.md)。题目与解答含大量公式
+> 与图形，是只抽散文式教学方法时不存在的新摄取需求。
+
+约定：
+
+- **公式 → LaTeX**：题干与解题步骤统一存为**含数学的 Markdown / LaTeX 文本**。
+  - 来源已是 LaTeX/MathML（如部分题库、Office 公式）→ 规范化为 LaTeX。
+  - 来源是图片中的公式 → 经 OCR / 多模态模型识别为 LaTeX。
+- **图形 → 图片 + 可选 TikZ**：
+  - 原图作为**可选附件**存 `.data/figures/...`，由 `figures.image_path` 记录。
+  - **可选增强**：用 AI 把图片转成 **TikZ 源码**（`figures.tikz_code`，
+    `origin=ai_generated`），便于无损缩放、版本化与再编辑。
+  - TikZ 生成是**可选步骤，类比 OCR**：未启用 / 失败时只保留原图，**不阻断流程**。
+- **成本开关**：与 OCR 一样，图片→TikZ 走付费/多模态通道时应有显式配置开关，
+  仅对真正需要的题目图形触发。
+
+数学内容的存储字段（`problems.stem`、`solutions.steps`、`figures.*`）定义见
+[knowledge-graph-redesign.md §3](knowledge-graph-redesign.md)。
+
 ## 与"AI + 工具 + 人工审核"原则的关系
 
 - **工具**（确定性）：抓取、类型识别、转换、附件发现——把杂乱来源整理成干净 Markdown。

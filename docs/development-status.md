@@ -2,7 +2,32 @@
 
 最近更新：2026-06-08。
 
-## 本次更新（2026-06-08）— 后台四项强化：摄取可见性 / 抓取合规 / 提取质量 / 人工复核
+## 本次更新（2026-06-08）— 设计定稿：四维知识图谱重构（文档先行，开发待启动）
+
+重新梳理数据关系后，确定把覆盖范围从"以教学方法为核心"升级为**四维知识图谱**：
+教材/章/节（版本相关，仅决定顺序）、知识点（版本无关、canonical）、题目（版本无关、
+弱关联小节）、解题技巧/模型（跨题复用）。本次**只落文档、未改代码**，按用户要求
+"文档先行，便于新对话/其他开发者接手"。
+
+- **新增主设计文档** [knowledge-graph-redesign.md](knowledge-graph-redesign.md)：单一事实
+  来源。含目标 schema（改造 `knowledge_points`、新增 `problems`/`solutions`/`figures`
+  与 4 张链接表）、抽取/调和改动、数学内容（LaTeX+图片+可选 TikZ）、**分期路线**
+  （Phase A 知识点 canonical 化 → B 技巧/解答概念澄清 → C 题目+解答），以及已定决策。
+- **核心结论与原则**：
+  - 教材是**视图**、知识点与题目是**稳定事实**；知识点必须 canonical（跨版本唯一）。
+  - 当前结构矛盾：`knowledge_points.section_id` 硬绑定 + `semantic_key` 带 section
+    作用域（见 `importers/template.py`），导致同一知识点跨版本重复——Phase A 优先修。
+  - **解答（Solution）≠ 解题技巧（Technique）**：解答题目专属、可一题多解；技巧
+    （= 现有 `teaching_methods`）跨题复用。解答经 `solution_technique_links` 引用技巧。
+- **已定决策**：题干存 LaTeX、图片可选、可选用 AI 把图片生成 TikZ；题干+答案都抓
+  （目标为内部数据库无版权问题，测试期仅用公开信息）；开发从 **Phase A** 起步。
+- **同步更新**：`data-model.md`（目标模型一节）、`architecture.md`（状态表/产品范围/
+  数据模型/路线图/待定决策）、`ingestion.md`（数学内容章节）、`CLAUDE.md`（范围4维+约定）。
+- **下一步（开发）**：实现 Phase A —— 新增 `section_knowledge_point_links`、数据迁移
+  （现有 KP 按 section 生成 link + 内容键去重合并）、改 `template.py` 与读取方、停用
+  `section_id`。验收：导入两个版本后共有知识点只占一条 canonical 记录。
+
+## 此前更新（2026-06-08）— 后台四项强化：摄取可见性 / 抓取合规 / 提取质量 / 人工复核
 
 围绕"AI+工具抓取整理、人工审核"原则，分四个可独立验证的阶段推进：
 
