@@ -55,6 +55,12 @@ def _ensure_source_document_pipeline_fields(engine: Engine) -> None:
             )
         if "pipeline_error" not in columns:
             connection.execute(text("ALTER TABLE source_documents ADD COLUMN pipeline_error TEXT"))
+        connection.execute(
+            text(
+                "UPDATE source_documents SET pipeline_status = 'crawled' "
+                "WHERE pipeline_status IS NULL"
+            )
+        )
 
 
 def _add_not_before_ddl(dialect_name: str) -> str:
