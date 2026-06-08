@@ -58,6 +58,28 @@ def test_does_not_split_on_solve_keyword_without_colon():
     assert problems[0].solutions == []
 
 
+def test_extracts_figures_from_stem_and_solution():
+    text = (
+        "例1 如图，求阴影面积。![三角形](/img/tri.png)\n"
+        '解：连接 AC。<img src="/img/aux.png" alt="辅助线">\n'
+        "答案：6\n"
+    )
+    problems = RuleBasedProblemExtractor().extract(text, None).problems
+
+    assert len(problems) == 1
+    problem = problems[0]
+    # 题干图片抽出，Markdown 标记从题干剥离
+    assert problem.stem == "如图，求阴影面积。"
+    assert [f.image_path for f in problem.figures] == ["/img/tri.png"]
+    assert problem.figures[0].caption == "三角形"
+    # 解答中的 HTML img 抽出，标记从步骤剥离
+    assert len(problem.solutions) == 1
+    solution = problem.solutions[0]
+    assert [f.image_path for f in solution.figures] == ["/img/aux.png"]
+    assert all("img" not in step.lower() for step in solution.steps)
+    assert solution.final_answer == "6"
+
+
 def test_extract_and_reconcile_end_to_end():
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)

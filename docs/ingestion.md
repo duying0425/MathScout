@@ -111,8 +111,10 @@ DOWNLOAD_ATTACHMENTS=true
   - 来源已是 LaTeX/MathML（如部分题库、Office 公式）→ 规范化为 LaTeX。
   - 来源是图片中的公式 → 经 OCR / 多模态模型识别为 LaTeX。
 - **图形 → 图片 + 可选 TikZ**：
-  - 原图作为**可选附件**存 `.data/figures/...`，由 `figures.image_path` 记录。
-  - **可选增强**：用 AI 把图片转成 **TikZ 源码**（`figures.tikz_code`，
+  - 原图由 `figures.image_path` 记录。✅ 规则抽取器（`extraction/problem_rule_based`）已能
+    从题干/解答文本里解析 Markdown `![alt](src)` 与 HTML `<img src=…>`，剥离标记后存为
+    `Figure`（`figure_kind=image`、`origin=original`）。
+  - **可选增强（📋 待做）**：用 AI 把图片转成 **TikZ 源码**（`figures.tikz_code`，
     `origin=ai_generated`），便于无损缩放、版本化与再编辑。
   - TikZ 生成是**可选步骤，类比 OCR**：未启用 / 失败时只保留原图，**不阻断流程**。
 - **成本开关**：与 OCR 一样，图片→TikZ 走付费/多模态通道时应有显式配置开关，

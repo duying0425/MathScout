@@ -277,7 +277,9 @@ semantic_key = normalize_semantic_key(f"{series.name}:{book.book_code}:{section.
 5. ✅ **题目库 UI**：`/admin/problems` 列表 + `/admin/problems/<id>` 详情（题干、解法+步骤+
    用到技巧、考察知识点、弱关联小节、配图）；详情页可**确认/拒绝** AI 标注的考察知识点
    （确认才建 `problem_knowledge_point_links`，写 `ManualEditLog`），闭合 KP 复核门控。
-6. 📋 摄取层数学内容（LaTeX + 图片 + 可选图片→TikZ）——见 [ingestion.md §5](ingestion.md)。
+6. 🚧 摄取层数学内容：**LaTeX 原样保留为文本**、**图片附件抽取已实现**（规则抽取器从题干/
+   解答里解析 Markdown `![](...)` 与 HTML `<img>`，剥离标记并存为 `Figure`）；
+   **图片→TikZ（多模态）待做**——见 [ingestion.md §5](ingestion.md)。
 7. 📋 AI 抽取器（多模态：含图片→TikZ）。
 8. 📋 先用**一个**范围可控的题源打通端到端，质量达标再扩量。
 

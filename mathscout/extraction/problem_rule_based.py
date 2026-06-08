@@ -3,7 +3,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from mathscout.extraction.schemas import EvidenceRef, ExtractedProblem, ExtractedSolution
+from mathscout.extraction.schemas import (
+    EvidenceRef,
+    ExtractedFigure,
+    ExtractedProblem,
+    ExtractedSolution,
+)
 from mathscout.utils.text import compact_lines, normalize_semantic_key
 
 # 题目起始标记：例N / 【例N】/ 第N题 / 题N / "N." / "N、"
@@ -19,6 +24,10 @@ APPROACH_MARKER = re.compile(
 )
 # 最终答案：答案：X / 答：X
 ANSWER_MARKER = re.compile(r"^(?:答案|答)\s*[:：]\s*(.+)$")
+# 图片附件：Markdown ![alt](src) 与 HTML <img ... src="...">
+MD_IMAGE = re.compile(r"!\[([^\]]*)\]\(\s*([^)\s]+)[^)]*\)")
+HTML_IMAGE_SRC = re.compile(r"<img\b[^>]*?\bsrc\s*=\s*[\"']?([^\"'>\s]+)", re.IGNORECASE)
+HTML_IMG_TAG = re.compile(r"<img\b[^>]*?>", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -38,6 +47,7 @@ class RuleBasedProblemExtractor:
         source_type = self._source_type(text, document_url)
         for block in self._split_blocks(lines):
             stem_lines, solution_lines = self._split_stem_and_solution(block)
+            stem_lines, stem_figures = self._extract_figures(stem_lines)
             stem = " ".join(stem_lines).strip()
             if len(stem) < 6:  # 太短，多半是噪声而非真正的题
                 continue
@@ -50,6 +60,7 @@ class RuleBasedProblemExtractor:
                     has_answer=bool(solution_lines),
                     semantic_key=normalize_semantic_key(stem),
                     solutions=solutions,
+                    figures=stem_figures,
                     evidence=[
                         EvidenceRef(
                             document_url=document_url, snippet=stem[:500], confidence=0.45
@@ -94,18 +105,47 @@ class RuleBasedProblemExtractor:
         groups = self._split_by_approach(solution_lines)
         solutions: list[ExtractedSolution] = []
         for label, body in groups:
+            body, figures = self._extract_figures(body)
             steps = [line for line in body if line]
-            if not steps:
+            if not steps and not figures:
                 continue
             solutions.append(
                 ExtractedSolution(
                     approach_label=label,
                     steps=steps,
                     final_answer=self._final_answer(steps),
+                    figures=figures,
                     confidence=0.4,
                 )
             )
         return solutions
+
+    def _extract_figures(
+        self, lines: list[str]
+    ) -> tuple[list[str], list[ExtractedFigure]]:
+        """从文本行中抽出图片（Markdown / HTML img），返回去掉图片标记后的文本与配图。"""
+        figures: list[ExtractedFigure] = []
+        cleaned: list[str] = []
+        for line in lines:
+            for alt, src in MD_IMAGE.findall(line):
+                figures.append(self._image_figure(src, alt))
+            for src in HTML_IMAGE_SRC.findall(line):
+                figures.append(self._image_figure(src, ""))
+            stripped = HTML_IMG_TAG.sub("", MD_IMAGE.sub("", line))
+            stripped = re.sub(r"\s+", " ", stripped).strip()
+            if stripped:
+                cleaned.append(stripped)
+        return cleaned, figures
+
+    @staticmethod
+    def _image_figure(src: str, alt: str) -> ExtractedFigure:
+        return ExtractedFigure(
+            figure_kind="image",
+            image_path=src.strip(),
+            caption=alt.strip() or None,
+            origin="original",
+            confidence=0.4,
+        )
 
     @staticmethod
     def _split_by_approach(lines: list[str]) -> list[tuple[str | None, list[str]]]:

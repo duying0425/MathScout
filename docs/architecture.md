@@ -390,8 +390,8 @@ FastAPI/Jinja 页面已经够用。
 - **Phase B — 技巧/解答概念澄清 + 事实层 schema** ✅：抽取 prompt 明确"解答 ≠ 技巧"；
   建出 `problems` / `solutions` / `figures` + 3 张链接表（空表、外键自洽）；`teaching_methods` 不动。
 - **Phase C — 题目 + 解答** 🚧：抽取契约 + 调和骨架（`ProblemReconciler`）+ 规则版抽取器
-  + **题目库 UI**（`/admin/problems` 列表/详情，含考察知识点确认/拒绝）已实现；
-  待做：AI 抽取器、摄取层 LaTeX + 图片 + 可选图片→TikZ、小范围试点。高风险。
+  （含**图片附件抽取**）+ **题目库 UI**（`/admin/problems`，含考察知识点确认/拒绝）已实现；
+  待做：AI 抽取器、图片→TikZ（多模态）、小范围试点。高风险。
 
 ## 11. 待定决策
 
