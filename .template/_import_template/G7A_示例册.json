@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "note_for_editor": "本文件是教材导入模板。把下面占位内容替换为真实数据即可。一个文件 = 一册（一个学期）。字段含义见同目录 README.md。",
+    "textbook_version_info": {
+      "textbook_series": "示例版初中数学（请替换为真实版本名，如：人教版初中数学）",
+      "curriculum_standard_basis": "义务教育数学课程标准（2022年版）",
+      "edition_label": "2024秋版",
+      "note": "版本备注，可留空。"
+    }
+  },
+  "shared_skill_catalog": [
+    { "skill_id": "S01", "name": "概念辨析", "description": "抓定义条件、适用范围、反例与边界。" },
+    { "skill_id": "S05", "name": "数形结合", "description": "用数轴、坐标系、函数图象、几何图形解释数量关系。" }
+  ],
+  "semester": {
+    "semester_id": "G7A",
+    "name": "七年级上册",
+    "chapters": [
+      {
+        "chapter_id": "G7A-C1",
+        "title": "示例章一：有理数",
+        "chapter_goal": "本章目标，可留空。",
+        "sections": [
+          {
+            "section_id": "G7A-C1-S1",
+            "title": "示例小节：正数与负数",
+            "skill_refs": ["S01"],
+            "knowledge_points": [
+              "正数、负数、0 的意义",
+              "用正负数表示相反意义的量"
+            ]
+          },
+          {
+            "section_id": "G7A-C1-S2",
+            "title": "示例小节：数轴与绝对值",
+            "skill_refs": ["S05"],
+            "knowledge_points": [
+              "数轴的三要素",
+              "相反数与绝对值的意义",
+              "有理数大小比较"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "G7A-C2",
+        "title": "示例章二：整式的加减",
+        "chapter_goal": "",
+        "sections": [
+          {
+            "section_id": "G7A-C2-S1",
+            "title": "示例小节：单项式与多项式",
+            "skill_refs": [],
+            "knowledge_points": [
+              "单项式的系数与次数",
+              "多项式的项与次数"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
