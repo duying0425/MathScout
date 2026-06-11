@@ -59,10 +59,14 @@ class ExtractPipeline:
         ).all()
 
         processed = candidates = methods = variants = errors = 0
+        problems = solutions = knowledge_points = 0
         for doc in docs:
             try:
                 result = self.extract_document(doc)
                 processed += 1
+                problems += result.get("problems", 0)
+                solutions += result.get("solutions", 0)
+                knowledge_points += result.get("knowledge_points", 0)
                 candidates += result["candidates"]
                 methods += result["methods"]
                 variants += result["variants"]
@@ -73,6 +77,9 @@ class ExtractPipeline:
                 self.session.commit()
         return {
             "processed": processed,
+            "problems": problems,
+            "solutions": solutions,
+            "knowledge_points": knowledge_points,
             "candidates": candidates,
             "methods": methods,
             "variants": variants,
@@ -89,14 +96,17 @@ class ExtractPipeline:
     def extract_document(self, document: SourceDocument) -> dict[str, object]:
         """对单个 SourceDocument 运行 AI/规则提取 + reconciliation。"""
         if document.needs_login:
-            return {"document_id": str(document.id), "candidates": 0, "methods": 0, "variants": 0}
+            return self._empty_result(document)
 
         text = self._read_text(document)
         if not text.strip():
             document.pipeline_status = PipelineStatus.failed
             document.pipeline_error = "text_path 为空，无法提取"
             self.session.commit()
-            return {"document_id": str(document.id), "candidates": 0, "methods": 0, "variants": 0}
+            return self._empty_result(document)
+
+        # 上层（事实）为主：先抽题目与知识点；技巧/方法（下层）随后抽。
+        upper = self._extract_upper_layers(document, text)
 
         extractor_name, extractor_version, model_name = self._extractor_metadata()
         extraction_run = ExtractionRun(
@@ -155,9 +165,54 @@ class ExtractPipeline:
         self.session.commit()
         return {
             "document_id": str(document.id),
+            "problems": upper["problems"],
+            "solutions": upper["solutions"],
+            "knowledge_points": upper["knowledge_points"],
             "candidates": created_candidates,
             "methods": created_methods,
             "variants": created_variants,
+        }
+
+    def _extract_upper_layers(self, document: SourceDocument, text: str) -> dict[str, int]:
+        """上层事实抽取：题目（含解答/配图/链接）+ 知识点。技巧/方法由本类下层抽取负责。
+
+        题目抽取自带规则回退，离线可用；知识点抽取仅 AI 版，未配置 AI 时跳过，且失败不
+        影响题目与方法抽取（best-effort 上层）。便函内部各自 commit。
+        """
+        from mathscout.pipeline.knowledge_extract import (
+            _use_ai,
+            extract_and_reconcile_knowledge_points,
+        )
+        from mathscout.pipeline.problem_extract import extract_and_reconcile_problems
+
+        problem_stats = extract_and_reconcile_problems(
+            self.session, document, text, self.settings, self.extractor_mode
+        )
+        knowledge_points = 0
+        if _use_ai(self.extractor_mode, self.settings):
+            try:
+                kp_stats = extract_and_reconcile_knowledge_points(
+                    self.session, document, text, self.settings, self.extractor_mode
+                )
+                knowledge_points = kp_stats["knowledge_points"]
+            except Exception:
+                knowledge_points = 0  # 知识点为 best-effort，失败不阻断其它层
+        return {
+            "problems": problem_stats["problems"],
+            "solutions": problem_stats["solutions"],
+            "knowledge_points": knowledge_points,
+        }
+
+    @staticmethod
+    def _empty_result(document: SourceDocument) -> dict[str, object]:
+        return {
+            "document_id": str(document.id),
+            "problems": 0,
+            "solutions": 0,
+            "knowledge_points": 0,
+            "candidates": 0,
+            "methods": 0,
+            "variants": 0,
         }
 
     # ------------------------------------------------------------------ #

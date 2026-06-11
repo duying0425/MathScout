@@ -68,7 +68,7 @@ def main() -> None:
     # ── Phase 2：提取 ───────────────────────────────────────────────────
     extract_pending_parser = subparsers.add_parser(
         "extract-pending",
-        help="【Phase 2】对所有 pipeline_status='crawled' 的文档运行 AI 提取。",
+        help="【Phase 2】对所有 crawled 文档抽取：上层（题目+知识点，为主）+ 下层（教学方法）。",
     )
     extract_pending_parser.add_argument(
         "--limit",
@@ -84,7 +84,7 @@ def main() -> None:
 
     extract_doc_parser = subparsers.add_parser(
         "extract-document",
-        help="【Phase 2】对单个文档 ID 运行 AI 提取。",
+        help="【Phase 2】对单个文档抽取：上层（题目+知识点，为主）+ 下层（教学方法）。",
     )
     extract_doc_parser.add_argument("document_id")
     extract_doc_parser.add_argument(

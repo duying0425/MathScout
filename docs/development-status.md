@@ -2,7 +2,25 @@
 
 最近更新：2026-06-08。
 
-## 本次更新（2026-06-08）— 知识点页面抽取：AI 抽取器 + 调和（维度 2 打通核心）
+## 本次更新（2026-06-08）— Phase 2 统一抽取触发：上层为主（修正管线优先级倒置）
+
+把题目与知识点抽取**接进 Phase 2**，并确立"上层事实为主、技巧/方法为下层辅助"的顺序。
+此前 Phase 2 唯一接线的抽取是教学方法（下层），上层（知识点/题目）抽取器虽已就绪却没有
+任何 CLI/流水线触发——这次补上这根接线。
+
+- **`ExtractPipeline.extract_document`**（`pipeline/extract.py`）：先跑 `_extract_upper_layers`
+  ——题目（`extract_and_reconcile_problems`，自带规则回退，离线可用）+ 知识点
+  （`extract_and_reconcile_knowledge_points`，仅 AI 版，未配置 AI 时跳过、失败不阻断）；
+  随后再跑原有的教学方法抽取（下层）。返回值新增 `problems/solutions/knowledge_points`。
+- **`extract_pending`**：汇总并返回上层计数；`extract-pending`/`extract-document` 两个 CLI
+  命令（及后台「提取」入口）即变为"上层为主 + 下层"的统一触发。
+- **设计对齐**：依据"上层三维（教材/知识点/题目）+ 下层（解题技巧/教学方法）"分层原则——
+  技巧仍可独立抽取（脱离具体题存在），但在管线中降为上层之后的辅助层。
+- **测试**：`tests/test_extract_layers.py`——一次 `extract_document`（rule 模式）即产出题目+
+  教学方法，知识点为 0（AI-only 跳过、不报错）。`ruff` 干净；`pytest` 54 全过。
+- ✅ 这条**触发入口待办（题目+知识点）至此完成**：从"已抓取文档"可一键端到端跑通三层抽取。
+
+## 此前更新（2026-06-08）— 知识点页面抽取：AI 抽取器 + 调和（维度 2 打通核心）
 
 补上"页面 → AI 识别知识点 → 入库 + 映射小节"这条此前**完全缺失**的链路。此前
 `KnowledgePoint` 只在 `template.py`（JSON 导入）被创建，`ExtractedKnowledgePoint` schema
