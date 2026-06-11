@@ -2,7 +2,26 @@
 
 最近更新：2026-06-08。
 
-## 本次更新（2026-06-08）— Phase C 切片 5：AI 文本版题目抽取器（DeepSeek，同契约可互换）
+## 本次更新（2026-06-08）— 知识点页面抽取：AI 抽取器 + 调和（维度 2 打通核心）
+
+补上"页面 → AI 识别知识点 → 入库 + 映射小节"这条此前**完全缺失**的链路。此前
+`KnowledgePoint` 只在 `template.py`（JSON 导入）被创建，`ExtractedKnowledgePoint` schema
+零引用；Phase 2 的 AI 只抽教学方法，不抽知识点。本次让该 schema 真正落地。
+
+- **AI 抽取器**（`extraction/ai_knowledge_extractor.py`）：DeepSeek/OpenAI 兼容，产出
+  `ExtractedKnowledgePoint`（标题/简述/教材线索/能力码/证据/置信度）；可注入 client，离线可测。
+- **调和管线**（`pipeline/knowledge_extract.py`）：`KnowledgePointReconciler` 复用
+  "候选 → reconciliation → canonical"三段式；知识点按**内容（标题归一化）去重**，与导入
+  共用 canonical 化口径（同一知识点跨版本/来源只存一条）；`source_type='extracted'`、
+  `review_status=pending`；能从册/章/节线索定位小节时建 `section_knowledge_point_links`。
+  便捷入口 `extract_and_reconcile_knowledge_points`（AI 版；未配置 AI 时明确报错）。
+- **测试**：`tests/test_knowledge_extract.py`（5 例）——创建 canonical+候选+决策+小节链接、
+  内容去重跨次累计 source_count、无小节线索不强连、AI 输出解析与坏 schema 报错。
+- **验证**：`ruff` 干净；`pytest` 53 全过。
+- ⚠️ **仍缺触发入口**：和题目一样，`extract_and_reconcile_knowledge_points` 目前是便捷
+  函数，尚未接 CLI / Phase 2 流水线（与题目共用同一条待办）。
+
+## 此前更新（2026-06-08）— Phase C 切片 5：AI 文本版题目抽取器（DeepSeek，同契约可互换）
 
 给题目抽取补上 AI 路径（纯文本，不读图），与规则版产出同一 `ExtractedProblem` 契约，
 编排入口可在两者间切换并带失败回退，复用现有 DeepSeek/OpenAI 兼容配置，不引入多模态。

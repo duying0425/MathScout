@@ -28,7 +28,7 @@
 | robots.txt 校验 / 按域限速 | ✅ | 已接入 `CrawlJobRunner`，`RESPECT_ROBOTS` 开关 |
 | 启动重置僵尸 running 作业/任务 | ✅ | `reset_stale_jobs`（main 启动调用）|
 | 候选复核详情页 + 编辑（同步 canonical 方法）| ✅ | `/admin/review/candidates/<id>` |
-| 四维知识图谱重构（知识点 canonical 化 / 题目 / 解答 / 技巧）| 🚧 | **A（知识点 canonical 化）+ B（题目/解答 schema）+ C 抽取契约/调和骨架已实现**；C 的真实抽取器/数学摄取/题目库 UI 规划中。见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md) |
+| 四维知识图谱重构（知识点 canonical 化 / 题目 / 解答 / 技巧）| 🚧 | **A（知识点 canonical 化）+ B（题目/解答 schema）+ C（题目规则/AI 抽取器·调和·题目库 UI·图片附件）+ 知识点页面抽取（AI 抽取器·调和）已实现**；题目/知识点抽取的 CLI/流水线触发待接。见 [knowledge-graph-redesign.md](knowledge-graph-redesign.md) |
 | PostgreSQL + Alembic + pgvector | 📋 | 当前仅 SQLite + 手写迁移 |
 | 独立 worker / 并发编排 | 📋 | 当前用 FastAPI `BackgroundTasks` |
 | 方法库编辑表单、合并/拆分、检索过滤 | 🚧 | 候选已可编辑；canonical 方法的独立编辑/合并仍待补 |
