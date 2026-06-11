@@ -273,15 +273,17 @@ semantic_key = normalize_semantic_key(f"{series.name}:{book.book_code}:{section.
 4. 🚧 真实抽取器：**规则版已实现**（`extraction/problem_rule_based.RuleBasedProblemExtractor`
    按 例N/题N/解：/解法N/答案 等标记切分题目与解答）+ 便捷入口
    `pipeline/problem_extract.extract_and_reconcile_problems`（文本→canonical 端到端）；
-   **AI 版待做**（输出同一 `ExtractedProblem` 契约即可替换）。
+   ✅ **AI 文本版抽取器**（`AIProblemExtractor`，DeepSeek/OpenAI 兼容）已接入：与规则版同
+   `ExtractedProblem` 契约，编排入口按 `extractor_mode`（auto/rule/ai）选择，auto 失败回退规则。
 5. ✅ **题目库 UI**：`/admin/problems` 列表 + `/admin/problems/<id>` 详情（题干、解法+步骤+
    用到技巧、考察知识点、弱关联小节、配图）；详情页可**确认/拒绝** AI 标注的考察知识点
    （确认才建 `problem_knowledge_point_links`，写 `ManualEditLog`），闭合 KP 复核门控。
 6. 🚧 摄取层数学内容：**LaTeX 原样保留为文本**、**图片附件抽取已实现**（规则抽取器从题干/
    解答里解析 Markdown `![](...)` 与 HTML `<img>`，剥离标记并存为 `Figure`）；
    **图片→TikZ（多模态）待做**——见 [ingestion.md §5](ingestion.md)。
-7. 📋 AI 抽取器（多模态：含图片→TikZ）。
-8. 📋 先用**一个**范围可控的题源打通端到端，质量达标再扩量。
+7. 🚧 AI 抽取器：✅ **文本版已实现**（见第 4 点）；**多模态版（读图、图片→TikZ）待做**。
+8. 📋 接入 CLI / 文档流水线（`extract_and_reconcile_problems` 目前仅作便捷入口，尚未挂到
+   pipeline_status / CLI）；先用**一个**范围可控的题源打通端到端，质量达标再扩量。
 
 ## 7. 已定的决策
 

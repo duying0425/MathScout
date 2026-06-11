@@ -26,6 +26,7 @@ from mathscout.db.models import (
     SourceDocument,
     TeachingMethod,
 )
+from mathscout.extraction.ai_problem_extractor import AIProblemExtractor
 from mathscout.extraction.problem_rule_based import RuleBasedProblemExtractor
 from mathscout.extraction.schemas import ExtractedFigure, ExtractedProblem, ExtractedSolution
 from mathscout.utils.text import normalize_semantic_key
@@ -376,15 +377,41 @@ class ProblemReconciler:
         self.session.flush()
 
 
+def _use_ai(extractor_mode: str, settings: Settings) -> bool:
+    if extractor_mode in {"rule", "rules"}:
+        return False
+    if extractor_mode in {"deepseek", "ai"}:
+        return True
+    return settings.ai_provider.lower() in {"deepseek", "openai-compatible", "ai"} and bool(
+        settings.ai_api_key
+    )
+
+
+def _run_problem_extractors(
+    text: str, document_url: str | None, extractor_mode: str, settings: Settings
+) -> list[ExtractedProblem]:
+    """选 AI 或规则抽取器。AI 在 auto 模式下失败回退规则；显式 ai 模式则抛出。"""
+    if _use_ai(extractor_mode, settings):
+        try:
+            return AIProblemExtractor(settings=settings).extract(text, document_url)
+        except Exception:
+            if extractor_mode in {"deepseek", "ai"}:
+                raise
+    return RuleBasedProblemExtractor().extract(text, document_url).problems
+
+
 def extract_and_reconcile_problems(
     session: Session,
     document: SourceDocument,
     text: str,
     settings: Settings | None = None,
+    extractor_mode: str = "auto",
 ) -> dict[str, int]:
-    """便捷入口：规则抽取 + 调和——清洗文本 → canonical 题目/解答/链接。
+    """便捷入口：抽取 + 调和——清洗文本 → canonical 题目/解答/链接。
 
-    AI 抽取器（后续切片）只要产出同一 `ExtractedProblem` 契约即可替换 extractor。
+    `extractor_mode`：`auto`（按配置，AI 失败回退规则）/`rule`（规则）/`ai`（强制 DeepSeek）。
+    AI 与规则抽取器产出同一 `ExtractedProblem` 契约，可互换。
     """
-    problems = RuleBasedProblemExtractor().extract(text, document.url).problems
+    settings = settings or get_settings()
+    problems = _run_problem_extractors(text, document.url, extractor_mode, settings)
     return ProblemReconciler(session, settings).ingest(problems, document)

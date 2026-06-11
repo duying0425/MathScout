@@ -2,7 +2,25 @@
 
 最近更新：2026-06-08。
 
-## 本次更新（2026-06-08）— Phase C 切片 4：图片附件抽取（数学内容摄取·非多模态）
+## 本次更新（2026-06-08）— Phase C 切片 5：AI 文本版题目抽取器（DeepSeek，同契约可互换）
+
+给题目抽取补上 AI 路径（纯文本，不读图），与规则版产出同一 `ExtractedProblem` 契约，
+编排入口可在两者间切换并带失败回退，复用现有 DeepSeek/OpenAI 兼容配置，不引入多模态。
+
+- **抽取器**（`extraction/ai_problem_extractor`）：`AIProblemExtractor`（client 可注入便于测试）。
+  System/User Prompt 强调：保留 LaTeX、题干与解答分离、一题多解、`technique_titles` 是
+  **可复用模型**（不是一次性步骤）、`knowledge_point_titles`（考察）交人工复核、JSON-only。
+  payload → `ExtractedProblem`/`ExtractedSolution` 契约；文本通道 `figures=[]`（图片由规则
+  抽取器的确定性解析负责）。schema 校验失败抛 `ValueError`。
+- **编排入口**（`pipeline/problem_extract`）：新增 `extractor_mode`（auto/rule/ai）与
+  `_use_ai`/`_run_problem_extractors`——auto 按配置选 AI，AI 失败回退规则；显式 `ai` 模式则抛出。
+  与教学方法管线（`extract.py`）行为一致。
+- **验证**：`ruff` 干净（4 个 E501 为既有）；`pytest` 48 全过（新增 3 例：契约映射、坏 schema
+  抛错、auto 回退规则）。AI 测试用桩 client，不触网。
+- **下一步**：把 `extract_and_reconcile_problems` 挂到 CLI / 文档流水线（目前仅便捷入口）；
+  多模态抽取（读图 + 图片→TikZ）；小范围真实题源试点。
+
+## 此前更新（2026-06-08）— Phase C 切片 4：图片附件抽取（数学内容摄取·非多模态）
 
 补上抽取器的图片缺口：`figures` 表/调和/UI 早已就绪，但抽取器从不产出 figure。本切片
 让规则抽取器从题干/解答里把图片抽出来（LaTeX 仍作为文本原样保留；图片→TikZ 多模态留后续）。
